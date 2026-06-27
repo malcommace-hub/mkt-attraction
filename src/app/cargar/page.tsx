@@ -12,6 +12,7 @@ import {
   getOrCreateWeek,
   updateInsights,
   deleteWeek,
+  friendlyError,
 } from "@/lib/data";
 import { currentMonday, weekRangeLabel } from "@/lib/week";
 import type { WeekFull } from "@/lib/types";
@@ -49,7 +50,10 @@ export default function CargarPage() {
         setWeeks(data);
         if (data.length > 0) setSelectedId(data[0].id);
       })
-      .catch((e) => setError(e.message ?? "Error al cargar datos"));
+      .catch((e) => {
+        console.error("fetchAllWeeks", e);
+        setError(friendlyError(e));
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -71,7 +75,8 @@ export default function CargarPage() {
       await reload(week.id);
       setSelectedId(week.id);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Error al crear la semana");
+      console.error("getOrCreateWeek", e);
+      setError(friendlyError(e));
     } finally {
       setCreating(false);
     }

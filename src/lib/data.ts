@@ -12,6 +12,27 @@ import type {
   WeekRow,
 } from "./types";
 
+// Convierte cualquier error de Supabase en un mensaje claro en español.
+// Detecta los casos típicos de una configuración recién hecha.
+export function friendlyError(e: unknown): string {
+  const err = e as { message?: string; code?: string; hint?: string } | null;
+  const msg = err?.message ?? "";
+  const code = err?.code ?? "";
+
+  // Tabla inexistente: falta correr el supabase.sql.
+  if (code === "42P01" || /does not exist|schema cache|relation .* does not/i.test(msg)) {
+    return 'Parece que las tablas todavía no existen. Andá al SQL Editor de Supabase y ejecutá el archivo "supabase.sql" del repo.';
+  }
+  // Clave inválida / sin permisos.
+  if (code === "401" || /invalid api key|jwt|unauthorized|permission denied/i.test(msg)) {
+    return "La conexión a Supabase fue rechazada. Revisá que NEXT_PUBLIC_SUPABASE_ANON_KEY sea la anon/publishable key correcta y que las políticas RLS estén creadas.";
+  }
+  if (/failed to fetch|networkerror|load failed/i.test(msg)) {
+    return "No se pudo conectar con Supabase. Revisá que NEXT_PUBLIC_SUPABASE_URL apunte a tu proyecto.";
+  }
+  return msg || "Ocurrió un error al cargar los datos. Revisá la configuración de Supabase.";
+}
+
 // Calcula el funnel de una semana sumando su detalle.
 export function computeFunnel(
   contents: ContentWithOpps[],

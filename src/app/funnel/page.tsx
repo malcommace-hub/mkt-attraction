@@ -7,7 +7,7 @@ import { FunnelChart, type ChartPoint } from "@/components/FunnelChart";
 import { WeekAccordion } from "@/components/WeekAccordion";
 import { ConfigWarning } from "@/components/ConfigWarning";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { fetchAllWeeks, computeGlobalTotals } from "@/lib/data";
+import { fetchAllWeeks, computeGlobalTotals, friendlyError } from "@/lib/data";
 import { shortWeekLabel } from "@/lib/week";
 import { fmtPct } from "@/lib/format";
 import type { WeekFull } from "@/lib/types";
@@ -21,7 +21,10 @@ export default function FunnelPage() {
     let alive = true;
     fetchAllWeeks()
       .then((w) => alive && setWeeks(w))
-      .catch((e) => alive && setError(e.message ?? "Error al cargar datos"));
+      .catch((e) => {
+        console.error("fetchAllWeeks", e);
+        if (alive) setError(friendlyError(e));
+      });
     return () => {
       alive = false;
     };
