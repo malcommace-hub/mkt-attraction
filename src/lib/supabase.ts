@@ -25,7 +25,13 @@ function sanitizeUrl(raw: string | undefined | null): string | null {
 }
 
 const cleanUrl = sanitizeUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
-const cleanKey = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
+// Aceptamos los dos nombres de variable: el clásico (anon key) y el nuevo que
+// sugiere Supabase (publishable key). Cualquiera de los dos sirve.
+const cleanKey = (
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+  ""
+).trim();
 
 export const isSupabaseConfigured = Boolean(cleanUrl && cleanKey);
 
