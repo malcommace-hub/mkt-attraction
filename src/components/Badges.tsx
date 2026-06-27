@@ -20,6 +20,8 @@ const CHANNEL_STYLES: Record<Channel, string> = {
   LinkedIn: "bg-[#0A66C2]/10 text-[#0A66C2]",
   Instagram: "bg-[#E1306C]/10 text-[#C13584]",
   TikTok: "bg-slate-900/10 text-slate-800",
+  "Todas las redes":
+    "bg-gradient-to-r from-[#0A66C2]/15 via-[#E1306C]/15 to-slate-900/15 text-slate-700",
 };
 
 export function ChannelBadge({ channel }: { channel: Channel }) {

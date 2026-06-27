@@ -1,7 +1,12 @@
 // Tipos de dominio del tablero "Supply Generation".
 
-export type Channel = "LinkedIn" | "Instagram" | "TikTok";
-export const CHANNELS: Channel[] = ["LinkedIn", "Instagram", "TikTok"];
+export type Channel = "LinkedIn" | "Instagram" | "TikTok" | "Todas las redes";
+export const CHANNELS: Channel[] = [
+  "LinkedIn",
+  "Instagram",
+  "TikTok",
+  "Todas las redes",
+];
 
 export type Seniority = "Junior" | "Semi-Senior" | "Senior";
 export const SENIORITIES: Seniority[] = ["Junior", "Semi-Senior", "Senior"];

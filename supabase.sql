@@ -41,7 +41,7 @@ create table if not exists public.contents (
   id          uuid primary key default gen_random_uuid(),
   week_id     uuid not null references public.weeks(id) on delete cascade,
   channel     text not null default 'LinkedIn'
-              check (channel in ('LinkedIn', 'Instagram', 'TikTok')),
+              check (channel in ('LinkedIn', 'Instagram', 'TikTok', 'Todas las redes')),
   title       text not null,
   views       integer not null default 0 check (views >= 0),
   url         text,
