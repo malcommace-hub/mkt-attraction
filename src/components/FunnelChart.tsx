@@ -18,13 +18,63 @@ export type ChartPoint = {
   label: string;
   views: number;
   applications: number;
+  confirmed: number;
 };
+
+// Punto interno: separamos la barra de postulaciones en "confirmadas" (violeta)
+// y "no confirmadas" (verde) para que se apilen y sumen el total.
+type StackedPoint = ChartPoint & { notConfirmed: number };
 
 const WEEKS_VISIBLE = 8;
 const MIN_WEEK_PX = 92; // ancho por semana para forzar el scroll horizontal
 
+const COLOR_VIEWS = "#1e293b";
+const COLOR_APPLICATIONS = "#2ECC71";
+const COLOR_CONFIRMED = "#8b5cf6";
+
+// Tooltip a medida: muestra views, postulaciones (total) y confirmados.
+function ChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: StackedPoint }>;
+  label?: string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+  const p = payload[0].payload;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs shadow-card">
+      <p className="mb-1 font-bold text-slate-700">Semana {label}</p>
+      <p className="flex items-center justify-between gap-4">
+        <span className="text-slate-500">Views</span>
+        <span className="font-semibold tabular-nums text-slate-800">{fmt(p.views)}</span>
+      </p>
+      <p className="flex items-center justify-between gap-4">
+        <span className="text-slate-500">Postulaciones</span>
+        <span className="font-semibold tabular-nums text-slate-800">
+          {fmt(p.applications)}
+        </span>
+      </p>
+      <p className="flex items-center justify-between gap-4">
+        <span style={{ color: COLOR_CONFIRMED }}>Confirmados</span>
+        <span className="font-semibold tabular-nums" style={{ color: COLOR_CONFIRMED }}>
+          {fmt(p.confirmed)}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 export function FunnelChart({ data }: { data: ChartPoint[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Confirmados nunca puede superar el total; el resto es "no confirmado".
+  const stacked: StackedPoint[] = data.map((d) => {
+    const confirmed = Math.min(d.confirmed, d.applications);
+    return { ...d, confirmed, notConfirmed: Math.max(0, d.applications - confirmed) };
+  });
 
   // Arrancar mostrando lo más reciente (extremo derecho).
   useEffect(() => {
@@ -56,7 +106,7 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
         <div style={{ width: innerWidth, height: 320 }}>
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart
-              data={data}
+              data={stacked}
               margin={{ top: 12, right: 16, bottom: 8, left: 0 }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#eef1f4" vertical={false} />
@@ -85,23 +135,29 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
               />
               <Tooltip
                 cursor={{ fill: "rgba(46, 204, 113, 0.06)" }}
-                contentStyle={{
-                  borderRadius: 12,
-                  border: "1px solid #e2e8f0",
-                  boxShadow: "0 8px 24px rgba(16,24,40,0.08)",
-                  fontSize: 12,
-                }}
-                formatter={(value, name) => [fmt(value as number), name as string]}
+                content={<ChartTooltip />}
               />
               <Legend
                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                 iconType="circle"
               />
+              {/* Barra de postulaciones apilada: confirmados (violeta) abajo,
+                  resto (verde) arriba. Juntos suman el total. */}
               <Bar
                 yAxisId="right"
-                dataKey="applications"
+                stackId="postulaciones"
+                dataKey="confirmed"
+                name="Confirmados"
+                fill={COLOR_CONFIRMED}
+                barSize={26}
+                animationDuration={500}
+              />
+              <Bar
+                yAxisId="right"
+                stackId="postulaciones"
+                dataKey="notConfirmed"
                 name="Postulaciones"
-                fill="#2ECC71"
+                fill={COLOR_APPLICATIONS}
                 radius={[6, 6, 0, 0]}
                 barSize={26}
                 animationDuration={500}
@@ -111,9 +167,9 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
                 type="monotone"
                 dataKey="views"
                 name="Views"
-                stroke="#1e293b"
+                stroke={COLOR_VIEWS}
                 strokeWidth={2.5}
-                dot={{ r: 3, fill: "#1e293b" }}
+                dot={{ r: 3, fill: COLOR_VIEWS }}
                 activeDot={{ r: 5 }}
                 animationDuration={600}
               />

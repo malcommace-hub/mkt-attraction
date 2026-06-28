@@ -44,6 +44,7 @@ export default function FunnelPage() {
         label: shortWeekLabel(w.weekStart),
         views: w.funnel.views,
         applications: w.funnel.applications,
+        confirmed: w.funnel.confirmed,
       }));
   }, [weeks]);
 

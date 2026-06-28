@@ -125,6 +125,24 @@ export async function getOrCreateWeek(dateISO: string): Promise<WeekRow> {
   return inserted.data as WeekRow;
 }
 
+// Cambia la fecha de una semana: reubica week_start al lunes de la fecha dada.
+export async function updateWeekStart(weekId: string, dateISO: string): Promise<void> {
+  const weekStart = mondayOf(dateISO);
+  const { error } = await supabase
+    .from("weeks")
+    .update({ week_start: weekStart })
+    .eq("id", weekId);
+  if (error) {
+    // Choca con otra semana que ya tiene ese lunes (week_start es único).
+    if (error.code === "23505" || /duplicate|unique/i.test(error.message ?? "")) {
+      throw new Error(
+        "Ya existe una semana con esa fecha. Eliminá o elegí otra para evitar duplicados."
+      );
+    }
+    throw error;
+  }
+}
+
 export async function updateInsights(weekId: string, insights: string): Promise<void> {
   const { error } = await supabase
     .from("weeks")

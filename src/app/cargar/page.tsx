@@ -11,6 +11,7 @@ import {
   fetchAllWeeks,
   getOrCreateWeek,
   updateInsights,
+  updateWeekStart,
   deleteWeek,
   friendlyError,
 } from "@/lib/data";
@@ -28,6 +29,10 @@ export default function CargarPage() {
   const [insightsDraft, setInsightsDraft] = useState("");
   const [insightsSaving, setInsightsSaving] = useState(false);
   const [insightsSaved, setInsightsSaved] = useState(false);
+
+  const [editingDate, setEditingDate] = useState(false);
+  const [dateDraft, setDateDraft] = useState("");
+  const [dateSaving, setDateSaving] = useState(false);
 
   async function reload(keepId?: string) {
     const data = await fetchAllWeeks();
@@ -92,6 +97,28 @@ export default function CargarPage() {
       setInsightsSaved(true);
     } finally {
       setInsightsSaving(false);
+    }
+  }
+
+  function openDateEditor() {
+    if (!selected) return;
+    setDateDraft(selected.weekStart);
+    setEditingDate(true);
+  }
+
+  async function handleSaveDate() {
+    if (!selected || !dateDraft) return;
+    setDateSaving(true);
+    setError(null);
+    try {
+      await updateWeekStart(selected.id, dateDraft);
+      await reload(selected.id);
+      setEditingDate(false);
+    } catch (e: unknown) {
+      console.error("updateWeekStart", e);
+      setError(friendlyError(e));
+    } finally {
+      setDateSaving(false);
     }
   }
 
@@ -172,14 +199,48 @@ export default function CargarPage() {
 
           {selected ? (
             <>
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold text-slate-800">
-                  Semana del {weekRangeLabel(selected.weekStart)}
-                </h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-bold text-slate-800">
+                    Semana del {weekRangeLabel(selected.weekStart)}
+                  </h2>
+                  {!editingDate && (
+                    <Button variant="ghost" onClick={openDateEditor}>
+                      ✎ Cambiar fecha
+                    </Button>
+                  )}
+                </div>
                 <Button variant="danger" onClick={handleDeleteWeek}>
                   Eliminar semana
                 </Button>
               </div>
+
+              {editingDate && (
+                <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
+                  <Label>Nueva fecha de la semana (cualquier día de esa semana)</Label>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <TextInput
+                      type="date"
+                      value={dateDraft}
+                      onChange={(e) => setDateDraft(e.target.value)}
+                      className="max-w-[200px]"
+                    />
+                    <Button onClick={handleSaveDate} disabled={dateSaving || !dateDraft}>
+                      {dateSaving ? "Guardando…" : "Guardar fecha"}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => setEditingDate(false)}
+                      disabled={dateSaving}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Se reubica al lunes correspondiente. Todo el detalle cargado se mantiene.
+                  </p>
+                </section>
+              )}
 
               {/* Insights */}
               <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
