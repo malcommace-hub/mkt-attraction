@@ -5,16 +5,17 @@ import { MobileNav } from "@/components/MobileNav";
 import { MetricCard } from "@/components/MetricCard";
 import { FunnelChart, type ChartPoint } from "@/components/FunnelChart";
 import { WeekAccordion } from "@/components/WeekAccordion";
+import { WeekDetailModal } from "@/components/WeekDetailModal";
 import { ConfigWarning } from "@/components/ConfigWarning";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { fetchAllWeeks, computeGlobalTotals, friendlyError } from "@/lib/data";
 import { shortWeekLabel } from "@/lib/week";
-import { fmtPct } from "@/lib/format";
 import type { WeekFull } from "@/lib/types";
 
 export default function FunnelPage() {
   const [weeks, setWeeks] = useState<WeekFull[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [modalWeekId, setModalWeekId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isSupabaseConfigured) return;
@@ -46,15 +47,22 @@ export default function FunnelPage() {
           .filter((o) => o.confirmed > 0)
           .map((o) => `${o.role} · ${o.company} (${o.confirmed})`);
         return {
+          weekId: w.id,
           label: shortWeekLabel(w.weekStart),
           views: w.funnel.views,
           applications: w.funnel.applications,
+          presented: w.funnel.presented,
           confirmed: w.funnel.confirmed,
           confirmedOpps,
           flagNote: w.flagNote,
         };
       });
   }, [weeks]);
+
+  const modalWeek = useMemo(
+    () => weeks?.find((w) => w.id === modalWeekId) ?? null,
+    [weeks, modalWeekId]
+  );
 
   return (
     <div className="animate-fade-in">
@@ -80,23 +88,17 @@ export default function FunnelPage() {
       ) : (
         <>
           {/* Métricas globales */}
-          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <MetricCard label="Contenidos" value={totals!.contentsCount} />
             <MetricCard label="Views" value={totals!.views} />
             <MetricCard label="Postulaciones" value={totals!.applications} />
-            <MetricCard label="Presentados" value={totals!.presented} />
-            <MetricCard label="Confirmados" value={totals!.confirmed} />
-            <MetricCard
-              label="Conversión"
-              value={fmtPct(totals!.conversionRate)}
-              hint="confirmados / postulaciones"
-              accent
-            />
+            <MetricCard label="Presentados" value={totals!.presented} color="green" />
+            <MetricCard label="Confirmados" value={totals!.confirmed} color="violet" />
           </section>
 
           {/* Gráfico combinado */}
           <section className="mb-8">
-            <FunnelChart data={chartData} />
+            <FunnelChart data={chartData} onSelectWeek={setModalWeekId} />
           </section>
 
           {/* Acordeón de semanas */}
@@ -120,6 +122,8 @@ export default function FunnelPage() {
           </section>
         </>
       )}
+
+      <WeekDetailModal week={modalWeek} onClose={() => setModalWeekId(null)} />
     </div>
   );
 }
@@ -127,8 +131,8 @@ export default function FunnelPage() {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {Array.from({ length: 6 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
           <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
         ))}
       </div>

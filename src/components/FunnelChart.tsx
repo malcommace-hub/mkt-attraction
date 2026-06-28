@@ -15,9 +15,11 @@ import {
 import { fmt } from "@/lib/format";
 
 export type ChartPoint = {
+  weekId: string;
   label: string;
   views: number;
   applications: number;
+  presented: number;
   confirmed: number;
   confirmedOpps: string[];
   flagNote: string | null;
@@ -35,6 +37,7 @@ const CHART_HEIGHT = 440;
 
 const COLOR_VIEWS = "#1e293b";
 const COLOR_APPLICATIONS = "#2ECC71";
+const COLOR_PRESENTED = "#3b82f6";
 const COLOR_CONFIRMED = "#8b5cf6";
 const COLOR_FLAG = "#f59e0b";
 
@@ -64,6 +67,12 @@ function ChartTooltip({
         </span>
       </p>
       <p className="flex items-center justify-between gap-4">
+        <span style={{ color: COLOR_PRESENTED }}>Presentados</span>
+        <span className="font-semibold tabular-nums" style={{ color: COLOR_PRESENTED }}>
+          {fmt(p.presented)}
+        </span>
+      </p>
+      <p className="flex items-center justify-between gap-4">
         <span style={{ color: COLOR_CONFIRMED }}>Confirmados</span>
         <span className="font-semibold tabular-nums" style={{ color: COLOR_CONFIRMED }}>
           {fmt(p.confirmed)}
@@ -89,6 +98,9 @@ function ChartTooltip({
           <p className="leading-snug text-slate-600">{p.flagNote}</p>
         </div>
       )}
+      <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-center text-[10px] text-slate-400">
+        Click para ver el detalle
+      </p>
     </div>
   );
 }
@@ -134,7 +146,13 @@ function FlagDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
   );
 }
 
-export function FunnelChart({ data }: { data: ChartPoint[] }) {
+export function FunnelChart({
+  data,
+  onSelectWeek,
+}: {
+  data: ChartPoint[];
+  onSelectWeek?: (weekId: string) => void;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
 
@@ -191,6 +209,13 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
             <ComposedChart
               data={plotted}
               margin={{ top: 20, right: 16, bottom: 8, left: 0 }}
+              onClick={(state: { activeTooltipIndex?: number } | null) => {
+                const i = state?.activeTooltipIndex;
+                if (i != null && plotted[i] && onSelectWeek) {
+                  onSelectWeek(plotted[i].weekId);
+                }
+              }}
+              className={onSelectWeek ? "cursor-pointer" : undefined}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#eef1f4" vertical={false} />
               <XAxis
@@ -222,6 +247,7 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
                 payload={[
                   { value: "Views", type: "line", color: COLOR_VIEWS, id: "views" },
                   { value: "Postulaciones", type: "circle", color: COLOR_APPLICATIONS, id: "apps" },
+                  { value: "Presentados", type: "line", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
                   { value: "Semana marcada", type: "circle", color: COLOR_FLAG, id: "flag" },
                 ]}
@@ -243,6 +269,18 @@ export function FunnelChart({ data }: { data: ChartPoint[] }) {
                 stroke={COLOR_VIEWS}
                 strokeWidth={2.5}
                 dot={{ r: 3, fill: COLOR_VIEWS }}
+                activeDot={{ r: 5 }}
+                animationDuration={600}
+              />
+              {/* Presentados: línea azul sobre el eje de postulaciones */}
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="presented"
+                name="Presentados"
+                stroke={COLOR_PRESENTED}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: COLOR_PRESENTED }}
                 activeDot={{ r: 5 }}
                 animationDuration={600}
               />
