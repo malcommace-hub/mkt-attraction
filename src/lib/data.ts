@@ -95,6 +95,7 @@ export async function fetchAllWeeks(): Promise<WeekFull[]> {
       id: w.id,
       weekStart: w.week_start,
       insights: w.insights,
+      flagNote: w.flag_note,
       opportunities: weekOpps,
       contents: weekContents,
       funnel: computeFunnel(weekContents, weekOpps),
@@ -147,6 +148,16 @@ export async function updateInsights(weekId: string, insights: string): Promise<
   const { error } = await supabase
     .from("weeks")
     .update({ insights })
+    .eq("id", weekId);
+  if (error) throw error;
+}
+
+// Marca/desmarca una semana en el gráfico. Texto vacío = sin marca.
+export async function updateFlagNote(weekId: string, flagNote: string): Promise<void> {
+  const value = flagNote.trim() === "" ? null : flagNote.trim();
+  const { error } = await supabase
+    .from("weeks")
+    .update({ flag_note: value })
     .eq("id", weekId);
   if (error) throw error;
 }

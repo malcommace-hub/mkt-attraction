@@ -40,12 +40,20 @@ export default function FunnelPage() {
     if (!weeks) return [];
     return [...weeks]
       .reverse()
-      .map((w) => ({
-        label: shortWeekLabel(w.weekStart),
-        views: w.funnel.views,
-        applications: w.funnel.applications,
-        confirmed: w.funnel.confirmed,
-      }));
+      .map((w) => {
+        // Oportunidades con al menos un confirmado, con su conteo.
+        const confirmedOpps = w.opportunities
+          .filter((o) => o.confirmed > 0)
+          .map((o) => `${o.role} · ${o.company} (${o.confirmed})`);
+        return {
+          label: shortWeekLabel(w.weekStart),
+          views: w.funnel.views,
+          applications: w.funnel.applications,
+          confirmed: w.funnel.confirmed,
+          confirmedOpps,
+          flagNote: w.flagNote,
+        };
+      });
   }, [weeks]);
 
   return (

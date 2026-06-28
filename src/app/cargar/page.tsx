@@ -12,6 +12,7 @@ import {
   getOrCreateWeek,
   updateInsights,
   updateWeekStart,
+  updateFlagNote,
   deleteWeek,
   friendlyError,
 } from "@/lib/data";
@@ -33,6 +34,10 @@ export default function CargarPage() {
   const [editingDate, setEditingDate] = useState(false);
   const [dateDraft, setDateDraft] = useState("");
   const [dateSaving, setDateSaving] = useState(false);
+
+  const [flagDraft, setFlagDraft] = useState("");
+  const [flagSaving, setFlagSaving] = useState(false);
+  const [flagSaved, setFlagSaved] = useState(false);
 
   async function reload(keepId?: string) {
     const data = await fetchAllWeeks();
@@ -73,6 +78,12 @@ export default function CargarPage() {
     setInsightsSaved(false);
   }, [selectedId, selected?.insights]);
 
+  // Sincronizar el borrador de la "marca" de la semana.
+  useEffect(() => {
+    setFlagDraft(selected?.flagNote ?? "");
+    setFlagSaved(false);
+  }, [selectedId, selected?.flagNote]);
+
   async function handleCreateWeek() {
     setCreating(true);
     try {
@@ -97,6 +108,19 @@ export default function CargarPage() {
       setInsightsSaved(true);
     } finally {
       setInsightsSaving(false);
+    }
+  }
+
+  async function handleSaveFlag() {
+    if (!selected) return;
+    setFlagSaving(true);
+    setFlagSaved(false);
+    try {
+      await updateFlagNote(selected.id, flagDraft);
+      await reload(selected.id);
+      setFlagSaved(true);
+    } finally {
+      setFlagSaving(false);
     }
   }
 
@@ -262,6 +286,32 @@ export default function CargarPage() {
                       ✓ Guardado
                     </span>
                   )}
+                </div>
+              </section>
+
+              {/* Marca de la semana (puntito ámbar en el gráfico) */}
+              <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
+                <Label>
+                  <span className="text-amber-700">⚑ Marcar esta semana (opcional)</span>
+                </Label>
+                <TextArea
+                  value={flagDraft}
+                  onChange={(e) => {
+                    setFlagDraft(e.target.value);
+                    setFlagSaved(false);
+                  }}
+                  placeholder="Ej: no hubo búsquedas suficientemente buenas / complicaciones para atraer talento…"
+                />
+                <div className="mt-2 flex items-center gap-3">
+                  <Button onClick={handleSaveFlag} disabled={flagSaving}>
+                    {flagSaving ? "Guardando…" : "Guardar marca"}
+                  </Button>
+                  {flagSaved && (
+                    <span className="text-xs font-medium text-amber-700">✓ Guardado</span>
+                  )}
+                  <span className="text-xs text-slate-400">
+                    Si lo dejás vacío, la semana queda sin marca.
+                  </span>
                 </div>
               </section>
 

@@ -16,6 +16,7 @@ export interface WeekRow {
   id: string;
   week_start: string; // ISO date (lunes de la semana)
   insights: string | null;
+  flag_note: string | null; // si tiene texto, la semana queda "marcada" en el gráfico
   created_at: string;
 }
 
@@ -66,6 +67,7 @@ export interface WeekFull {
   id: string;
   weekStart: string;
   insights: string | null;
+  flagNote: string | null;
   opportunities: OpportunityRow[];
   contents: ContentWithOpps[];
   funnel: WeekFunnel;

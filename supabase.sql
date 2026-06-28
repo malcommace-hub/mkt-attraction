@@ -14,6 +14,7 @@ create table if not exists public.weeks (
   id          uuid primary key default gen_random_uuid(),
   week_start  date not null unique,            -- lunes de la semana
   insights    text default '',
+  flag_note   text,                            -- si tiene texto, la semana queda "marcada" en el gráfico
   created_at  timestamptz not null default now()
 );
 
