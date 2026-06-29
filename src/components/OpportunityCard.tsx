@@ -72,39 +72,40 @@ export function OpportunityCard({
           }}
         />
       ) : (
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          {/* Identidad */}
-          <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-              {fmtDate(opp.date)}
-            </p>
-            <div className="mt-0.5 flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-bold text-slate-900">
-                {opp.role || <span className="italic text-slate-400">Sin título</span>}
-              </h3>
-              {opp.company && <span className="text-sm text-slate-400">· {opp.company}</span>}
-              <SeniorityBadge seniority={opp.seniority} />
+        <div className="flex flex-col gap-3">
+          {/* Identidad + acciones */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                {fmtDate(opp.date)}
+              </p>
+              <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <h3 className="text-base font-bold leading-tight text-slate-900">
+                  {opp.role || <span className="italic text-slate-400">Sin título</span>}
+                </h3>
+                {opp.company && <span className="text-sm text-slate-400">· {opp.company}</span>}
+                <SeniorityBadge seniority={opp.seniority} />
+              </div>
             </div>
-            {opp.note && <p className="mt-1 text-xs italic text-slate-500">💬 {opp.note}</p>}
+            <div className="flex shrink-0 gap-1">
+              <Button variant="outline" onClick={() => setEditing(true)}>
+                Editar
+              </Button>
+              <Button variant="danger" onClick={handleDelete}>
+                Eliminar
+              </Button>
+            </div>
           </div>
+
+          {opp.note && <p className="text-xs italic text-slate-500">💬 {opp.note}</p>}
 
           {/* Métricas */}
           <div className="flex flex-wrap gap-2">
-            <Pill label="Views opp" value={opp.views} color="text-slate-800" />
             <Pill label="Contenidos" value={opp.contentsCount} color="text-slate-800" />
+            <Pill label="Views opp" value={opp.views} color="text-slate-800" />
             <Pill label="Postulac." value={opp.applications} color="text-slate-800" />
             <Pill label="Present." value={opp.presented} color="text-accent-700" />
             <Pill label="Confirm." value={opp.confirmed} color="text-violet-600" />
-          </div>
-
-          {/* Acciones */}
-          <div className="flex shrink-0 gap-1 lg:flex-col">
-            <Button variant="outline" onClick={() => setEditing(true)}>
-              Editar
-            </Button>
-            <Button variant="danger" onClick={handleDelete}>
-              Eliminar
-            </Button>
           </div>
         </div>
       )}
