@@ -90,10 +90,11 @@ export function WeekDetailModal({
         </div>
 
         {/* Resumen del funnel */}
-        <div className="grid grid-cols-3 gap-2 border-b border-slate-100 px-5 py-3 sm:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 border-b border-slate-100 px-5 py-3 sm:grid-cols-6">
           <Stat label="Contenidos" value={week.funnel.contentsCount} color="text-slate-800" />
           <Stat label="Views" value={week.funnel.views} color="text-slate-800" />
           <Stat label="Postulac." value={week.funnel.applications} color="text-slate-800" />
+          <Stat label="Perfiles base" value={week.funnel.profilesForBase} color="text-slate-800" />
           <Stat label="Present." value={week.funnel.presented} color="text-accent-700" />
           <Stat label="Confirm." value={week.funnel.confirmed} color="text-violet-600" />
         </div>

@@ -3,39 +3,13 @@ import type { WeekFull } from "@/lib/types";
 import { fmt } from "@/lib/format";
 import { ChannelBadge, SeniorityBadge } from "./Badges";
 
-// Cuerpo con el detalle de una semana (insights, oportunidades, contenidos).
+// Cuerpo con el detalle de una semana (oportunidades con su comentario, contenidos).
 // Se reutiliza en el acordeón del funnel y en el panel flotante.
 export function WeekDetailBody({ week }: { week: WeekFull }) {
   const oppById = new Map(week.opportunities.map((o) => [o.id, o]));
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Marca de la semana (si tiene) */}
-      {week.flagNote && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5">
-          <p className="mb-0.5 flex items-center gap-1 text-xs font-bold uppercase tracking-wide text-amber-700">
-            ⚑ Semana marcada
-          </p>
-          <p className="whitespace-pre-line text-sm leading-relaxed text-amber-800">
-            {week.flagNote}
-          </p>
-        </div>
-      )}
-
-      {/* Insights */}
-      <section>
-        <h4 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-accent-700">
-          Insights de la semana
-        </h4>
-        {week.insights && week.insights.trim() ? (
-          <p className="whitespace-pre-line text-sm leading-relaxed text-slate-600">
-            {week.insights}
-          </p>
-        ) : (
-          <p className="text-sm italic text-slate-400">Sin insights cargados.</p>
-        )}
-      </section>
-
       {/* Oportunidades */}
       <section>
         <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-accent-700">

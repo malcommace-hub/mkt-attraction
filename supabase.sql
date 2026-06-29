@@ -13,8 +13,7 @@ create extension if not exists "pgcrypto";
 create table if not exists public.weeks (
   id          uuid primary key default gen_random_uuid(),
   week_start  date not null unique,            -- lunes de la semana
-  insights    text default '',
-  flag_note   text,                            -- si tiene texto, la semana queda "marcada" en el gráfico
+  profiles_for_base integer not null default 0, -- métrica manual: perfiles útiles para la base
   created_at  timestamptz not null default now()
 );
 

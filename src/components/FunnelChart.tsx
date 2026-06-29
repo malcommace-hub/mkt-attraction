@@ -22,14 +22,12 @@ export type ChartPoint = {
   presented: number;
   confirmed: number;
   confirmedOpps: string[];
-  flagNote: string | null;
 };
 
 // Punto interno con las coordenadas de los marcadores (círculos sobre la barra).
 type PlottedPoint = ChartPoint & {
   presentedMarkerY: number | null; // y del círculo azul (parte alta de la barra)
   confirmedMarkerY: number | null; // y del círculo violeta (parte baja de la barra)
-  flagMarkerY: number | null; // y del puntito ámbar (arriba de la barra)
 };
 
 const VISIBLE_WEEKS = 10; // semanas que entran sin scrollear
@@ -40,7 +38,6 @@ const COLOR_VIEWS = "#1e293b";
 const COLOR_APPLICATIONS = "#2ECC71";
 const COLOR_PRESENTED = "#3b82f6";
 const COLOR_CONFIRMED = "#8b5cf6";
-const COLOR_FLAG = "#f59e0b";
 
 // ---- Tooltip a medida ----
 function ChartTooltip({
@@ -89,14 +86,6 @@ function ChartTooltip({
               • {o}
             </p>
           ))}
-        </div>
-      )}
-      {p.flagNote && (
-        <div className="mt-1.5 border-t border-slate-100 pt-1.5">
-          <p className="mb-0.5 flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide" style={{ color: COLOR_FLAG }}>
-            ⚑ Semana marcada
-          </p>
-          <p className="leading-snug text-slate-600">{p.flagNote}</p>
         </div>
       )}
       <p className="mt-1.5 border-t border-slate-100 pt-1.5 text-center text-[10px] text-slate-400">
@@ -165,26 +154,6 @@ function ConfirmedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint 
   );
 }
 
-// ---- Triángulo ámbar en la base de la barra para semanas marcadas ----
-function FlagTriangle(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
-  const { cx, cy, payload } = props;
-  if (cx == null || cy == null || !payload || payload.flagMarkerY == null) {
-    return <g />;
-  }
-  // cy = línea base (valor 0). Triángulo apuntando hacia arriba, apoyado en la base.
-  const w = 8;
-  const h = 13;
-  return (
-    <polygon
-      points={`${cx},${cy - h} ${cx - w},${cy - 1} ${cx + w},${cy - 1}`}
-      fill={COLOR_FLAG}
-      stroke="#fff"
-      strokeWidth={2}
-      strokeLinejoin="round"
-    />
-  );
-}
-
 export function FunnelChart({
   data,
   onSelectWeek,
@@ -194,6 +163,7 @@ export function FunnelChart({
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [containerW, setContainerW] = useState(0);
+  const [showViews, setShowViews] = useState(true);
 
   // Medimos el ancho disponible para repartir las semanas (10 visibles).
   useLayoutEffect(() => {
@@ -226,7 +196,6 @@ export function FunnelChart({
     ...d,
     presentedMarkerY: d.presented > 0 ? d.applications * 0.68 : null,
     confirmedMarkerY: d.confirmed > 0 ? d.applications * 0.34 : null,
-    flagMarkerY: d.flagNote ? 0 : null, // en la base de la barra
   }));
 
   // Ancho por semana: si entran <=10, llenan el contenedor; si hay más, scroll.
@@ -236,13 +205,24 @@ export function FunnelChart({
 
   return (
     <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-sm font-bold text-slate-700">
-          Views vs. postulaciones por semana
+          Postulaciones, presentados y views por semana
         </h3>
-        <span className="hidden text-xs text-slate-400 sm:inline">
-          ⇽ scrolleá para ver más semanas ⇾
-        </span>
+        <div className="flex items-center gap-4">
+          <label className="flex cursor-pointer select-none items-center gap-1.5 text-xs font-medium text-slate-500">
+            <input
+              type="checkbox"
+              checked={showViews}
+              onChange={(e) => setShowViews(e.target.checked)}
+              className="h-3.5 w-3.5 cursor-pointer accent-slate-800"
+            />
+            Mostrar línea de views
+          </label>
+          <span className="hidden text-xs text-slate-400 sm:inline">
+            ⇽ scrolleá ⇾
+          </span>
+        </div>
       </div>
       <div ref={scrollRef} className="scroll-x overflow-x-auto pb-2">
         <div style={{ width: innerWidth, height: CHART_HEIGHT }}>
@@ -268,6 +248,7 @@ export function FunnelChart({
               />
               <YAxis
                 yAxisId="left"
+                hide={!showViews}
                 tick={{ fontSize: 11, fill: "#94a3b8" }}
                 tickLine={false}
                 axisLine={false}
@@ -286,11 +267,12 @@ export function FunnelChart({
               <Legend
                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                 payload={[
-                  { value: "Views", type: "line", color: COLOR_VIEWS, id: "views" },
+                  ...(showViews
+                    ? [{ value: "Views", type: "line" as const, color: COLOR_VIEWS, id: "views" }]
+                    : []),
                   { value: "Postulaciones", type: "rect", color: COLOR_APPLICATIONS, id: "apps" },
                   { value: "Presentados", type: "circle", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
-                  { value: "Semana marcada", type: "triangle", color: COLOR_FLAG, id: "flag" },
                 ]}
               />
               <Bar
@@ -302,17 +284,19 @@ export function FunnelChart({
                 maxBarSize={36}
                 animationDuration={500}
               />
-              <Line
-                yAxisId="left"
-                type="monotone"
-                dataKey="views"
-                name="Views"
-                stroke={COLOR_VIEWS}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: COLOR_VIEWS }}
-                activeDot={{ r: 5 }}
-                animationDuration={600}
-              />
+              {showViews && (
+                <Line
+                  yAxisId="left"
+                  type="monotone"
+                  dataKey="views"
+                  name="Views"
+                  stroke={COLOR_VIEWS}
+                  strokeWidth={2.5}
+                  dot={{ r: 3, fill: COLOR_VIEWS }}
+                  activeDot={{ r: 5 }}
+                  animationDuration={600}
+                />
+              )}
               {/* Círculo azul de presentados (parte alta de la barra) */}
               <Line
                 yAxisId="right"
@@ -334,18 +318,6 @@ export function FunnelChart({
                 isAnimationActive={false}
                 legendType="circle"
                 dot={<ConfirmedDot />}
-                activeDot={false}
-                connectNulls={false}
-              />
-              {/* Triángulo ámbar de semana marcada (en la base de la barra) */}
-              <Line
-                yAxisId="right"
-                dataKey="flagMarkerY"
-                name="Semana marcada"
-                stroke="none"
-                isAnimationActive={false}
-                legendType="triangle"
-                dot={<FlagTriangle />}
                 activeDot={false}
                 connectNulls={false}
               />

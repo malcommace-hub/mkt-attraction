@@ -15,8 +15,7 @@ export const SENIORITIES: Seniority[] = ["Junior", "Semi-Senior", "Senior"];
 export interface WeekRow {
   id: string;
   week_start: string; // ISO date (lunes de la semana)
-  insights: string | null;
-  flag_note: string | null; // si tiene texto, la semana queda "marcada" en el gráfico
+  profiles_for_base: number; // métrica manual: perfiles útiles para la base a futuro
   created_at: string;
 }
 
@@ -54,21 +53,21 @@ export interface ContentWithOpps extends ContentRow {
   opportunityIds: string[];
 }
 
-// Funnel calculado de una semana.
+// Funnel de una semana (la mayoría calculado; profilesForBase es manual).
 export interface WeekFunnel {
   contentsCount: number;
   views: number;
   applications: number;
+  profilesForBase: number;
   presented: number;
   confirmed: number;
 }
 
-// Semana completa con su detalle y funnel calculado.
+// Semana completa con su detalle y funnel.
 export interface WeekFull {
   id: string;
   weekStart: string;
-  insights: string | null;
-  flagNote: string | null;
+  profilesForBase: number;
   opportunities: OpportunityRow[];
   contents: ContentWithOpps[];
   funnel: WeekFunnel;

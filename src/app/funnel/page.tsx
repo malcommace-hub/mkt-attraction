@@ -56,7 +56,6 @@ export default function FunnelPage() {
           presented: w.funnel.presented,
           confirmed: w.funnel.confirmed,
           confirmedOpps,
-          flagNote: w.flagNote,
         };
       });
   }, [weeks]);
@@ -90,10 +89,11 @@ export default function FunnelPage() {
       ) : (
         <>
           {/* Métricas globales */}
-          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <section className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             <MetricCard label="Contenidos" value={totals!.contentsCount} />
             <MetricCard label="Views" value={totals!.views} />
             <MetricCard label="Postulaciones" value={totals!.applications} />
+            <MetricCard label="Perfiles para base" value={totals!.profilesForBase} />
             <MetricCard label="Presentados" value={totals!.presented} color="green" />
             <MetricCard label="Confirmados" value={totals!.confirmed} color="violet" />
           </section>
@@ -137,8 +137,8 @@ export default function FunnelPage() {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="h-24 animate-pulse rounded-2xl bg-slate-100" />
         ))}
       </div>

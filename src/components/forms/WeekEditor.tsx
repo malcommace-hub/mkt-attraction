@@ -3,18 +3,17 @@
 import { useEffect, useState } from "react";
 import type { WeekFull } from "@/lib/types";
 import {
-  updateInsights,
   updateWeekStart,
-  updateFlagNote,
+  updateProfilesForBase,
   deleteWeek,
   friendlyError,
 } from "@/lib/data";
 import { weekRangeLabel } from "@/lib/week";
 import { OpportunityEditor } from "./OpportunityEditor";
 import { ContentEditor } from "./ContentEditor";
-import { Button, Label, TextArea, TextInput } from "./inputs";
+import { Button, Label, NumberInput, TextInput } from "./inputs";
 
-// Editor completo de una semana (fecha, insights, marca, oportunidades, contenidos).
+// Editor completo de una semana (fecha, perfiles para base, oportunidades, contenidos).
 // Se usa en la pestaña "Cargar datos" y en el panel flotante del funnel.
 export function WeekEditor({
   week,
@@ -27,58 +26,24 @@ export function WeekEditor({
   onDeleted?: () => void;
   showFunnelSummary?: boolean;
 }) {
-  const [insightsDraft, setInsightsDraft] = useState(week.insights ?? "");
-  const [insightsSaving, setInsightsSaving] = useState(false);
-  const [insightsSaved, setInsightsSaved] = useState(false);
-
-  const [flagDraft, setFlagDraft] = useState(week.flagNote ?? "");
-  const [flagSaving, setFlagSaving] = useState(false);
-  const [flagSaved, setFlagSaved] = useState(false);
-
   const [editingDate, setEditingDate] = useState(false);
   const [dateDraft, setDateDraft] = useState(week.weekStart);
   const [dateSaving, setDateSaving] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
 
-  // Re-sincronizar los borradores cuando cambia la semana o sus valores.
-  useEffect(() => {
-    setInsightsDraft(week.insights ?? "");
-    setInsightsSaved(false);
-  }, [week.id, week.insights]);
-
-  useEffect(() => {
-    setFlagDraft(week.flagNote ?? "");
-    setFlagSaved(false);
-  }, [week.id, week.flagNote]);
+  const [profilesDraft, setProfilesDraft] = useState(week.profilesForBase);
+  const [profilesSaving, setProfilesSaving] = useState(false);
+  const [profilesSaved, setProfilesSaved] = useState(false);
 
   useEffect(() => {
     setEditingDate(false);
     setDateError(null);
   }, [week.id]);
 
-  async function handleSaveInsights() {
-    setInsightsSaving(true);
-    setInsightsSaved(false);
-    try {
-      await updateInsights(week.id, insightsDraft);
-      await onChange();
-      setInsightsSaved(true);
-    } finally {
-      setInsightsSaving(false);
-    }
-  }
-
-  async function handleSaveFlag() {
-    setFlagSaving(true);
-    setFlagSaved(false);
-    try {
-      await updateFlagNote(week.id, flagDraft);
-      await onChange();
-      setFlagSaved(true);
-    } finally {
-      setFlagSaving(false);
-    }
-  }
+  useEffect(() => {
+    setProfilesDraft(week.profilesForBase);
+    setProfilesSaved(false);
+  }, [week.id, week.profilesForBase]);
 
   async function handleSaveDate() {
     if (!dateDraft) return;
@@ -93,6 +58,18 @@ export function WeekEditor({
       setDateError(friendlyError(e));
     } finally {
       setDateSaving(false);
+    }
+  }
+
+  async function handleSaveProfiles() {
+    setProfilesSaving(true);
+    setProfilesSaved(false);
+    try {
+      await updateProfilesForBase(week.id, profilesDraft);
+      await onChange();
+      setProfilesSaved(true);
+    } finally {
+      setProfilesSaving(false);
     }
   }
 
@@ -116,7 +93,13 @@ export function WeekEditor({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
           {!editingDate ? (
-            <Button variant="outline" onClick={() => { setDateDraft(week.weekStart); setEditingDate(true); }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setDateDraft(week.weekStart);
+                setEditingDate(true);
+              }}
+            >
               ✎ Cambiar fecha
             </Button>
           ) : (
@@ -142,45 +125,26 @@ export function WeekEditor({
       </div>
       {dateError && <p className="-mt-3 text-xs text-red-600">{dateError}</p>}
 
-      {/* Insights */}
+      {/* Perfiles para base (métrica manual) */}
       <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
-        <Label>Insights de la semana</Label>
-        <TextArea
-          value={insightsDraft}
-          onChange={(e) => {
-            setInsightsDraft(e.target.value);
-            setInsightsSaved(false);
-          }}
-          placeholder="Ej: esta semana no hubo oportunidades buenas, por eso menos postulaciones…"
-        />
-        <div className="mt-2 flex items-center gap-3">
-          <Button onClick={handleSaveInsights} disabled={insightsSaving}>
-            {insightsSaving ? "Guardando…" : "Guardar insights"}
+        <Label>Perfiles para base (carga manual)</Label>
+        <div className="flex flex-wrap items-center gap-3">
+          <NumberInput
+            value={profilesDraft}
+            onChange={(e) => {
+              setProfilesDraft(Number(e.target.value) || 0);
+              setProfilesSaved(false);
+            }}
+            className="max-w-[140px]"
+          />
+          <Button onClick={handleSaveProfiles} disabled={profilesSaving}>
+            {profilesSaving ? "Guardando…" : "Guardar"}
           </Button>
-          {insightsSaved && <span className="text-xs font-medium text-accent-700">✓ Guardado</span>}
+          {profilesSaved && <span className="text-xs font-medium text-accent-700">✓ Guardado</span>}
         </div>
-      </section>
-
-      {/* Marca de la semana */}
-      <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
-        <Label>
-          <span className="text-amber-700">⚑ Marcar esta semana (opcional)</span>
-        </Label>
-        <TextArea
-          value={flagDraft}
-          onChange={(e) => {
-            setFlagDraft(e.target.value);
-            setFlagSaved(false);
-          }}
-          placeholder="Ej: no hubo búsquedas suficientemente buenas / complicaciones para atraer talento…"
-        />
-        <div className="mt-2 flex items-center gap-3">
-          <Button onClick={handleSaveFlag} disabled={flagSaving}>
-            {flagSaving ? "Guardando…" : "Guardar marca"}
-          </Button>
-          {flagSaved && <span className="text-xs font-medium text-amber-700">✓ Guardado</span>}
-          <span className="text-xs text-slate-400">Si lo dejás vacío, la semana queda sin marca.</span>
-        </div>
+        <p className="mt-1 text-xs text-slate-400">
+          Perfiles que no sirvieron para la búsqueda puntual pero quedan útiles para la base a futuro.
+        </p>
       </section>
 
       <OpportunityEditor
@@ -201,10 +165,11 @@ export function WeekEditor({
           <h3 className="mb-2 text-sm font-bold text-accent-800">
             Funnel calculado de esta semana
           </h3>
-          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-6">
             <FunnelStat label="Contenidos" value={week.funnel.contentsCount} />
             <FunnelStat label="Views" value={week.funnel.views} />
             <FunnelStat label="Postulaciones" value={week.funnel.applications} />
+            <FunnelStat label="Perfiles base" value={week.funnel.profilesForBase} />
             <FunnelStat label="Presentados" value={week.funnel.presented} />
             <FunnelStat label="Confirmados" value={week.funnel.confirmed} />
           </div>

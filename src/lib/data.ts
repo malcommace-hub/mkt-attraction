@@ -42,6 +42,7 @@ export function computeFunnel(
     contentsCount: contents.length,
     views: contents.reduce((acc, c) => acc + (c.views || 0), 0),
     applications: opportunities.reduce((acc, o) => acc + (o.applications || 0), 0),
+    profilesForBase: 0, // métrica manual; se completa desde la fila de la semana
     presented: opportunities.reduce((acc, o) => acc + (o.presented || 0), 0),
     confirmed: opportunities.reduce((acc, o) => acc + (o.confirmed || 0), 0),
   };
@@ -91,14 +92,14 @@ export async function fetchAllWeeks(): Promise<WeekFull[]> {
   return weeks.map((w) => {
     const weekOpps = oppsByWeek.get(w.id) ?? [];
     const weekContents = contentsByWeek.get(w.id) ?? [];
+    const profilesForBase = w.profiles_for_base ?? 0;
     return {
       id: w.id,
       weekStart: w.week_start,
-      insights: w.insights,
-      flagNote: w.flag_note,
+      profilesForBase,
       opportunities: weekOpps,
       contents: weekContents,
-      funnel: computeFunnel(weekContents, weekOpps),
+      funnel: { ...computeFunnel(weekContents, weekOpps), profilesForBase },
     } satisfies WeekFull;
   });
 }
@@ -118,7 +119,7 @@ export async function getOrCreateWeek(dateISO: string): Promise<WeekRow> {
 
   const inserted = await supabase
     .from("weeks")
-    .insert({ week_start: weekStart, insights: "" })
+    .insert({ week_start: weekStart })
     .select()
     .single();
 
@@ -144,20 +145,14 @@ export async function updateWeekStart(weekId: string, dateISO: string): Promise<
   }
 }
 
-export async function updateInsights(weekId: string, insights: string): Promise<void> {
+// Métrica manual de la semana: perfiles útiles para la base a futuro.
+export async function updateProfilesForBase(
+  weekId: string,
+  value: number
+): Promise<void> {
   const { error } = await supabase
     .from("weeks")
-    .update({ insights })
-    .eq("id", weekId);
-  if (error) throw error;
-}
-
-// Marca/desmarca una semana en el gráfico. Texto vacío = sin marca.
-export async function updateFlagNote(weekId: string, flagNote: string): Promise<void> {
-  const value = flagNote.trim() === "" ? null : flagNote.trim();
-  const { error } = await supabase
-    .from("weeks")
-    .update({ flag_note: value })
+    .update({ profiles_for_base: Math.max(0, Math.round(value || 0)) })
     .eq("id", weekId);
   if (error) throw error;
 }
@@ -277,10 +272,18 @@ export function computeGlobalTotals(weeks: WeekFull[]): WeekFunnel & {
       contentsCount: acc.contentsCount + w.funnel.contentsCount,
       views: acc.views + w.funnel.views,
       applications: acc.applications + w.funnel.applications,
+      profilesForBase: acc.profilesForBase + w.funnel.profilesForBase,
       presented: acc.presented + w.funnel.presented,
       confirmed: acc.confirmed + w.funnel.confirmed,
     }),
-    { contentsCount: 0, views: 0, applications: 0, presented: 0, confirmed: 0 }
+    {
+      contentsCount: 0,
+      views: 0,
+      applications: 0,
+      profilesForBase: 0,
+      presented: 0,
+      confirmed: 0,
+    }
   );
 
   const conversionRate =
