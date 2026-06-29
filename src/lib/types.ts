@@ -15,7 +15,6 @@ export const SENIORITIES: Seniority[] = ["Junior", "Semi-Senior", "Senior"];
 export interface WeekRow {
   id: string;
   week_start: string; // ISO date (lunes de la semana)
-  profiles_for_base: number; // métrica manual: perfiles útiles para la base a futuro
   created_at: string;
 }
 
@@ -26,6 +25,7 @@ export interface OpportunityRow {
   company: string;
   seniority: Seniority;
   applications: number;
+  profiles_for_base: number; // perfiles útiles para la base a futuro (no para esta búsqueda)
   presented: number;
   confirmed: number;
   date: string | null;
@@ -67,7 +67,6 @@ export interface WeekFunnel {
 export interface WeekFull {
   id: string;
   weekStart: string;
-  profilesForBase: number;
   opportunities: OpportunityRow[];
   contents: ContentWithOpps[];
   funnel: WeekFunnel;

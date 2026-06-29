@@ -19,13 +19,14 @@ export function WeekDetailBody({ week }: { week: WeekFull }) {
           <p className="text-sm italic text-slate-400">Sin oportunidades.</p>
         ) : (
           <div className="overflow-x-auto scroll-x">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
                   <th className="py-2 pr-3">Rol</th>
                   <th className="py-2 pr-3">Empresa</th>
                   <th className="py-2 pr-3">Seniority</th>
                   <th className="py-2 pr-3 text-right">Postulac.</th>
+                  <th className="py-2 pr-3 text-right">Perf. base</th>
                   <th className="py-2 pr-3 text-right">Present.</th>
                   <th className="py-2 text-right">Confirm.</th>
                 </tr>
@@ -42,6 +43,9 @@ export function WeekDetailBody({ week }: { week: WeekFull }) {
                       <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
                         {fmt(o.applications)}
                       </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
+                        {fmt(o.profiles_for_base)}
+                      </td>
                       <td className="py-2.5 pr-3 text-right tabular-nums font-semibold text-accent-700">
                         {fmt(o.presented)}
                       </td>
@@ -51,7 +55,7 @@ export function WeekDetailBody({ week }: { week: WeekFull }) {
                     </tr>
                     {o.note && (
                       <tr className="border-b border-slate-50 last:border-0">
-                        <td colSpan={6} className="pb-2.5 pl-0 pr-3">
+                        <td colSpan={7} className="pb-2.5 pl-0 pr-3">
                           <span className="text-xs italic text-slate-500">💬 {o.note}</span>
                         </td>
                       </tr>

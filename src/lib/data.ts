@@ -42,7 +42,7 @@ export function computeFunnel(
     contentsCount: contents.length,
     views: contents.reduce((acc, c) => acc + (c.views || 0), 0),
     applications: opportunities.reduce((acc, o) => acc + (o.applications || 0), 0),
-    profilesForBase: 0, // métrica manual; se completa desde la fila de la semana
+    profilesForBase: opportunities.reduce((acc, o) => acc + (o.profiles_for_base || 0), 0),
     presented: opportunities.reduce((acc, o) => acc + (o.presented || 0), 0),
     confirmed: opportunities.reduce((acc, o) => acc + (o.confirmed || 0), 0),
   };
@@ -92,14 +92,12 @@ export async function fetchAllWeeks(): Promise<WeekFull[]> {
   return weeks.map((w) => {
     const weekOpps = oppsByWeek.get(w.id) ?? [];
     const weekContents = contentsByWeek.get(w.id) ?? [];
-    const profilesForBase = w.profiles_for_base ?? 0;
     return {
       id: w.id,
       weekStart: w.week_start,
-      profilesForBase,
       opportunities: weekOpps,
       contents: weekContents,
-      funnel: { ...computeFunnel(weekContents, weekOpps), profilesForBase },
+      funnel: computeFunnel(weekContents, weekOpps),
     } satisfies WeekFull;
   });
 }
@@ -145,17 +143,6 @@ export async function updateWeekStart(weekId: string, dateISO: string): Promise<
   }
 }
 
-// Métrica manual de la semana: perfiles útiles para la base a futuro.
-export async function updateProfilesForBase(
-  weekId: string,
-  value: number
-): Promise<void> {
-  const { error } = await supabase
-    .from("weeks")
-    .update({ profiles_for_base: Math.max(0, Math.round(value || 0)) })
-    .eq("id", weekId);
-  if (error) throw error;
-}
 
 export async function deleteWeek(weekId: string): Promise<void> {
   // Las FK están con ON DELETE CASCADE, así que esto limpia todo el detalle.
@@ -170,6 +157,7 @@ export type OpportunityInput = {
   company: string;
   seniority: OpportunityRow["seniority"];
   applications: number;
+  profiles_for_base: number;
   presented: number;
   confirmed: number;
   date: string | null;

@@ -13,7 +13,6 @@ create extension if not exists "pgcrypto";
 create table if not exists public.weeks (
   id          uuid primary key default gen_random_uuid(),
   week_start  date not null unique,            -- lunes de la semana
-  profiles_for_base integer not null default 0, -- métrica manual: perfiles útiles para la base
   created_at  timestamptz not null default now()
 );
 
@@ -28,6 +27,7 @@ create table if not exists public.opportunities (
   seniority    text not null default 'Semi-Senior'
                check (seniority in ('Junior', 'Semi-Senior', 'Senior')),
   applications integer not null default 0 check (applications >= 0),
+  profiles_for_base integer not null default 0 check (profiles_for_base >= 0),
   presented    integer not null default 0 check (presented >= 0),
   confirmed    integer not null default 0 check (confirmed >= 0),
   date         date,

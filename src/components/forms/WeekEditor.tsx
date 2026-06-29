@@ -2,16 +2,11 @@
 
 import { useEffect, useState } from "react";
 import type { WeekFull } from "@/lib/types";
-import {
-  updateWeekStart,
-  updateProfilesForBase,
-  deleteWeek,
-  friendlyError,
-} from "@/lib/data";
+import { updateWeekStart, deleteWeek, friendlyError } from "@/lib/data";
 import { weekRangeLabel } from "@/lib/week";
 import { OpportunityEditor } from "./OpportunityEditor";
 import { ContentEditor } from "./ContentEditor";
-import { Button, Label, NumberInput, TextInput } from "./inputs";
+import { Button, TextInput } from "./inputs";
 
 // Editor completo de una semana (fecha, perfiles para base, oportunidades, contenidos).
 // Se usa en la pestaña "Cargar datos" y en el panel flotante del funnel.
@@ -31,19 +26,10 @@ export function WeekEditor({
   const [dateSaving, setDateSaving] = useState(false);
   const [dateError, setDateError] = useState<string | null>(null);
 
-  const [profilesDraft, setProfilesDraft] = useState(week.profilesForBase);
-  const [profilesSaving, setProfilesSaving] = useState(false);
-  const [profilesSaved, setProfilesSaved] = useState(false);
-
   useEffect(() => {
     setEditingDate(false);
     setDateError(null);
   }, [week.id]);
-
-  useEffect(() => {
-    setProfilesDraft(week.profilesForBase);
-    setProfilesSaved(false);
-  }, [week.id, week.profilesForBase]);
 
   async function handleSaveDate() {
     if (!dateDraft) return;
@@ -58,18 +44,6 @@ export function WeekEditor({
       setDateError(friendlyError(e));
     } finally {
       setDateSaving(false);
-    }
-  }
-
-  async function handleSaveProfiles() {
-    setProfilesSaving(true);
-    setProfilesSaved(false);
-    try {
-      await updateProfilesForBase(week.id, profilesDraft);
-      await onChange();
-      setProfilesSaved(true);
-    } finally {
-      setProfilesSaving(false);
     }
   }
 
@@ -124,28 +98,6 @@ export function WeekEditor({
         </Button>
       </div>
       {dateError && <p className="-mt-3 text-xs text-red-600">{dateError}</p>}
-
-      {/* Perfiles para base (métrica manual) */}
-      <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
-        <Label>Perfiles para base (carga manual)</Label>
-        <div className="flex flex-wrap items-center gap-3">
-          <NumberInput
-            value={profilesDraft}
-            onChange={(e) => {
-              setProfilesDraft(Number(e.target.value) || 0);
-              setProfilesSaved(false);
-            }}
-            className="max-w-[140px]"
-          />
-          <Button onClick={handleSaveProfiles} disabled={profilesSaving}>
-            {profilesSaving ? "Guardando…" : "Guardar"}
-          </Button>
-          {profilesSaved && <span className="text-xs font-medium text-accent-700">✓ Guardado</span>}
-        </div>
-        <p className="mt-1 text-xs text-slate-400">
-          Perfiles que no sirvieron para la búsqueda puntual pero quedan útiles para la base a futuro.
-        </p>
-      </section>
 
       <OpportunityEditor
         weekId={week.id}

@@ -17,6 +17,7 @@ const EMPTY: OpportunityInput = {
   company: "",
   seniority: "Semi-Senior",
   applications: 0,
+  profiles_for_base: 0,
   presented: 0,
   confirmed: 0,
   date: null,
@@ -29,6 +30,7 @@ function toInput(o: OpportunityRow): OpportunityInput {
     company: o.company,
     seniority: o.seniority,
     applications: o.applications,
+    profiles_for_base: o.profiles_for_base,
     presented: o.presented,
     confirmed: o.confirmed,
     date: o.date,
@@ -108,6 +110,15 @@ function OpportunityForm({
           value={form.applications}
           onChange={(e) =>
             setForm({ ...form, applications: Number(e.target.value) || 0 })
+          }
+        />
+      </div>
+      <div className="sm:col-span-3">
+        <Label>Perfiles para base</Label>
+        <NumberInput
+          value={form.profiles_for_base}
+          onChange={(e) =>
+            setForm({ ...form, profiles_for_base: Number(e.target.value) || 0 })
           }
         />
       </div>
@@ -221,8 +232,8 @@ export function OpportunityEditor({
                 <div className="mt-1 flex items-center gap-2 text-xs text-slate-500">
                   <SeniorityBadge seniority={o.seniority} />
                   <span className="tabular-nums">
-                    {fmt(o.applications)} post · {fmt(o.presented)} pres ·{" "}
-                    {fmt(o.confirmed)} conf
+                    {fmt(o.applications)} post · {fmt(o.profiles_for_base)} base ·{" "}
+                    {fmt(o.presented)} pres · {fmt(o.confirmed)} conf
                   </span>
                 </div>
                 {o.note && (
