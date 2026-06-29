@@ -93,11 +93,7 @@ export default function DashboardPage() {
     <div className="animate-fade-in">
       {/* Header */}
       <header className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-accent text-white shadow-soft">
-          <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
-            <path d="M12 3c3 3 6 5 6 9a6 6 0 1 1-12 0c0-4 3-6 6-9Z" fill="currentColor" />
-          </svg>
-        </div>
+        <BrandLogo />
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
             Supply Generation
@@ -203,6 +199,28 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
+      )}
+    </div>
+  );
+}
+
+// Logo del header: muestra public/logo.png si existe; si no, el ícono verde.
+function BrandLogo() {
+  const [hasImage, setHasImage] = useState(true);
+  return (
+    <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-accent text-white shadow-soft">
+      {hasImage ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src="/logo.png"
+          alt="Logo"
+          className="h-full w-full object-cover"
+          onError={() => setHasImage(false)}
+        />
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" className="h-6 w-6" aria-hidden>
+          <path d="M12 3c3 3 6 5 6 9a6 6 0 1 1-12 0c0-4 3-6 6-9Z" fill="currentColor" />
+        </svg>
       )}
     </div>
   );
