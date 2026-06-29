@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
+  Bar,
+  BarChart,
   CartesianGrid,
+  LabelList,
   Legend,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -47,7 +48,7 @@ function ChartTooltip({
         </span>
       </p>
       <p className="flex justify-between gap-4">
-        <span style={{ color: COLOR_REAL }}>Real</span>
+        <span style={{ color: COLOR_REAL }}>Share real</span>
         <span className="font-semibold tabular-nums" style={{ color: COLOR_REAL }}>
           {p.real != null ? `${p.real.toFixed(1)}%` : "s/d"}
         </span>
@@ -101,27 +102,38 @@ export function MonthlyGoalSection({
       });
   }, [opportunities, totalsByMonth]);
 
+  // El gráfico muestra solo los meses con meta definida (Q3).
+  const chartData = useMemo(
+    () => monthData.filter((d) => d.goal != null),
+    [monthData]
+  );
+
   return (
     <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
       <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-base font-bold text-slate-800">
-          Meta mensual · % de presentados desde career site
+          Meta mensual · share de presentados desde career site
         </h2>
-        <span className="text-xs text-slate-400">meta (punteada) vs. real</span>
+        <span className="text-xs text-slate-400">meta vs. real (Q3)</span>
       </div>
 
-      {monthData.length === 0 ? (
+      {chartData.length === 0 ? (
         <div className="flex h-56 items-center justify-center text-sm text-slate-400">
           Cargá oportunidades y el total mensual para ver el avance.
         </div>
       ) : (
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthData} margin={{ top: 12, right: 16, bottom: 4, left: -8 }}>
+            <BarChart
+              data={chartData}
+              margin={{ top: 20, right: 16, bottom: 4, left: -8 }}
+              barGap={3}
+              barCategoryGap="35%"
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#eef1f4" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 12, fill: "#94a3b8" }}
+                tick={{ fontSize: 12, fill: "#64748b", fontWeight: 600 }}
                 tickLine={false}
                 axisLine={{ stroke: "#e2e8f0" }}
               />
@@ -132,29 +144,22 @@ export function MonthlyGoalSection({
                 width={44}
                 tickFormatter={(v) => `${v}%`}
               />
-              <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} iconType="plainline" />
-              <Line
-                type="monotone"
-                dataKey="goal"
-                name="Meta"
-                stroke={COLOR_GOAL}
-                strokeWidth={2}
-                strokeDasharray="6 5"
-                dot={{ r: 3, fill: COLOR_GOAL }}
-                connectNulls
-              />
-              <Line
-                type="monotone"
-                dataKey="real"
-                name="Real"
-                stroke={COLOR_REAL}
-                strokeWidth={2.5}
-                dot={{ r: 4, fill: COLOR_REAL }}
-                activeDot={{ r: 6 }}
-                connectNulls={false}
-              />
-            </LineChart>
+              <Tooltip cursor={{ fill: "rgba(46,204,113,0.06)" }} content={<ChartTooltip />} />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} iconType="rect" />
+              <Bar dataKey="goal" name="Meta" fill={COLOR_GOAL} radius={[6, 6, 0, 0]} maxBarSize={54}>
+                <LabelList dataKey="goal" position="top" formatter={(v: number) => `${v}%`} fontSize={11} fill={COLOR_GOAL} />
+              </Bar>
+              <Bar dataKey="real" name="Real (share)" fill={COLOR_REAL} radius={[6, 6, 0, 0]} maxBarSize={54}>
+                <LabelList
+                  dataKey="real"
+                  position="top"
+                  formatter={(v: number | null) => (v != null ? `${v.toFixed(1)}%` : "")}
+                  fontSize={11}
+                  fontWeight={700}
+                  fill="#15803d"
+                />
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       )}
@@ -187,9 +192,9 @@ function MonthlyTotalsEditor({
             <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
               <th className="py-1.5 pr-3">Mes</th>
               <th className="py-1.5 pr-3 text-right">Meta</th>
+              <th className="py-1.5 pr-3 text-right">Share</th>
               <th className="py-1.5 pr-3 text-right">Career site</th>
-              <th className="py-1.5 pr-3 text-right">Total (manual)</th>
-              <th className="py-1.5 text-right">Real</th>
+              <th className="py-1.5 text-right">Total (manual)</th>
             </tr>
           </thead>
           <tbody>
@@ -238,8 +243,11 @@ function MonthRowEditor({
       <td className="py-1.5 pr-3 text-right tabular-nums text-slate-500">
         {d.goal != null ? `${d.goal}%` : "—"}
       </td>
+      <td className="py-1.5 pr-3 text-right tabular-nums font-bold text-accent-700">
+        {saving ? "…" : d.real != null ? `${d.real.toFixed(1)}%` : "s/d"}
+      </td>
       <td className="py-1.5 pr-3 text-right tabular-nums text-slate-500">{fmt(d.career)}</td>
-      <td className="py-1.5 pr-3 text-right">
+      <td className="py-1.5 text-right">
         <input
           type="number"
           min={0}
@@ -248,9 +256,6 @@ function MonthRowEditor({
           onBlur={save}
           className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-accent focus:ring-2 focus:ring-accent-200"
         />
-      </td>
-      <td className="py-1.5 text-right tabular-nums font-bold text-accent-700">
-        {saving ? "…" : d.real != null ? `${d.real.toFixed(1)}%` : "s/d"}
       </td>
     </tr>
   );
