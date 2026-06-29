@@ -30,6 +30,7 @@ export interface OpportunityRow {
   presented: number;
   confirmed: number;
   date: string | null;
+  note: string | null; // comentario / insight de esta oportunidad
   created_at: string;
 }
 

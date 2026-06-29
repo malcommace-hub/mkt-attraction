@@ -178,6 +178,7 @@ export type OpportunityInput = {
   presented: number;
   confirmed: number;
   date: string | null;
+  note: string | null;
 };
 
 export async function insertOpportunity(

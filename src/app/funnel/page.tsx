@@ -17,18 +17,20 @@ export default function FunnelPage() {
   const [error, setError] = useState<string | null>(null);
   const [modalWeekId, setModalWeekId] = useState<string | null>(null);
 
+  async function reload() {
+    try {
+      const w = await fetchAllWeeks();
+      setWeeks(w);
+    } catch (e) {
+      console.error("fetchAllWeeks", e);
+      setError(friendlyError(e));
+    }
+  }
+
   useEffect(() => {
     if (!isSupabaseConfigured) return;
-    let alive = true;
-    fetchAllWeeks()
-      .then((w) => alive && setWeeks(w))
-      .catch((e) => {
-        console.error("fetchAllWeeks", e);
-        if (alive) setError(friendlyError(e));
-      });
-    return () => {
-      alive = false;
-    };
+    reload();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const totals = useMemo(
@@ -123,7 +125,11 @@ export default function FunnelPage() {
         </>
       )}
 
-      <WeekDetailModal week={modalWeek} onClose={() => setModalWeekId(null)} />
+      <WeekDetailModal
+        week={modalWeek}
+        onClose={() => setModalWeekId(null)}
+        onChange={reload}
+      />
     </div>
   );
 }

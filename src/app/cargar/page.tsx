@@ -3,19 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { MobileNav } from "@/components/MobileNav";
 import { ConfigWarning } from "@/components/ConfigWarning";
-import { OpportunityEditor } from "@/components/forms/OpportunityEditor";
-import { ContentEditor } from "@/components/forms/ContentEditor";
-import { Button, Label, Select, TextArea, TextInput } from "@/components/forms/inputs";
+import { WeekEditor } from "@/components/forms/WeekEditor";
+import { Button, Label, Select, TextInput } from "@/components/forms/inputs";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import {
-  fetchAllWeeks,
-  getOrCreateWeek,
-  updateInsights,
-  updateWeekStart,
-  updateFlagNote,
-  deleteWeek,
-  friendlyError,
-} from "@/lib/data";
+import { fetchAllWeeks, getOrCreateWeek, friendlyError } from "@/lib/data";
 import { currentMonday, weekRangeLabel } from "@/lib/week";
 import type { WeekFull } from "@/lib/types";
 
@@ -26,18 +17,6 @@ export default function CargarPage() {
 
   const [newDate, setNewDate] = useState<string>(currentMonday());
   const [creating, setCreating] = useState(false);
-
-  const [insightsDraft, setInsightsDraft] = useState("");
-  const [insightsSaving, setInsightsSaving] = useState(false);
-  const [insightsSaved, setInsightsSaved] = useState(false);
-
-  const [editingDate, setEditingDate] = useState(false);
-  const [dateDraft, setDateDraft] = useState("");
-  const [dateSaving, setDateSaving] = useState(false);
-
-  const [flagDraft, setFlagDraft] = useState("");
-  const [flagSaving, setFlagSaving] = useState(false);
-  const [flagSaved, setFlagSaved] = useState(false);
 
   async function reload(keepId?: string) {
     const data = await fetchAllWeeks();
@@ -72,18 +51,6 @@ export default function CargarPage() {
     [weeks, selectedId]
   );
 
-  // Sincronizar el borrador de insights cuando cambia la semana seleccionada.
-  useEffect(() => {
-    setInsightsDraft(selected?.insights ?? "");
-    setInsightsSaved(false);
-  }, [selectedId, selected?.insights]);
-
-  // Sincronizar el borrador de la "marca" de la semana.
-  useEffect(() => {
-    setFlagDraft(selected?.flagNote ?? "");
-    setFlagSaved(false);
-  }, [selectedId, selected?.flagNote]);
-
   async function handleCreateWeek() {
     setCreating(true);
     try {
@@ -96,68 +63,6 @@ export default function CargarPage() {
     } finally {
       setCreating(false);
     }
-  }
-
-  async function handleSaveInsights() {
-    if (!selected) return;
-    setInsightsSaving(true);
-    setInsightsSaved(false);
-    try {
-      await updateInsights(selected.id, insightsDraft);
-      await reload(selected.id);
-      setInsightsSaved(true);
-    } finally {
-      setInsightsSaving(false);
-    }
-  }
-
-  async function handleSaveFlag() {
-    if (!selected) return;
-    setFlagSaving(true);
-    setFlagSaved(false);
-    try {
-      await updateFlagNote(selected.id, flagDraft);
-      await reload(selected.id);
-      setFlagSaved(true);
-    } finally {
-      setFlagSaving(false);
-    }
-  }
-
-  function openDateEditor() {
-    if (!selected) return;
-    setDateDraft(selected.weekStart);
-    setEditingDate(true);
-  }
-
-  async function handleSaveDate() {
-    if (!selected || !dateDraft) return;
-    setDateSaving(true);
-    setError(null);
-    try {
-      await updateWeekStart(selected.id, dateDraft);
-      await reload(selected.id);
-      setEditingDate(false);
-    } catch (e: unknown) {
-      console.error("updateWeekStart", e);
-      setError(friendlyError(e));
-    } finally {
-      setDateSaving(false);
-    }
-  }
-
-  async function handleDeleteWeek() {
-    if (!selected) return;
-    if (
-      !confirm(
-        `¿Eliminar la semana del ${weekRangeLabel(
-          selected.weekStart
-        )} con TODO su detalle? Esta acción no se puede deshacer.`
-      )
-    )
-      return;
-    await deleteWeek(selected.id);
-    await reload();
   }
 
   return (
@@ -223,128 +128,18 @@ export default function CargarPage() {
 
           {selected ? (
             <>
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-lg font-bold text-slate-800">
-                    Semana del {weekRangeLabel(selected.weekStart)}
-                  </h2>
-                  {!editingDate && (
-                    <Button variant="ghost" onClick={openDateEditor}>
-                      ✎ Cambiar fecha
-                    </Button>
-                  )}
-                </div>
-                <Button variant="danger" onClick={handleDeleteWeek}>
-                  Eliminar semana
-                </Button>
-              </div>
-
-              {editingDate && (
-                <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
-                  <Label>Nueva fecha de la semana (cualquier día de esa semana)</Label>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <TextInput
-                      type="date"
-                      value={dateDraft}
-                      onChange={(e) => setDateDraft(e.target.value)}
-                      className="max-w-[200px]"
-                    />
-                    <Button onClick={handleSaveDate} disabled={dateSaving || !dateDraft}>
-                      {dateSaving ? "Guardando…" : "Guardar fecha"}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setEditingDate(false)}
-                      disabled={dateSaving}
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Se reubica al lunes correspondiente. Todo el detalle cargado se mantiene.
-                  </p>
-                </section>
-              )}
-
-              {/* Insights */}
-              <section className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-soft">
-                <Label>Insights de la semana</Label>
-                <TextArea
-                  value={insightsDraft}
-                  onChange={(e) => {
-                    setInsightsDraft(e.target.value);
-                    setInsightsSaved(false);
-                  }}
-                  placeholder="Ej: esta semana no hubo oportunidades buenas, por eso menos postulaciones…"
-                />
-                <div className="mt-2 flex items-center gap-3">
-                  <Button onClick={handleSaveInsights} disabled={insightsSaving}>
-                    {insightsSaving ? "Guardando…" : "Guardar insights"}
-                  </Button>
-                  {insightsSaved && (
-                    <span className="text-xs font-medium text-accent-700">
-                      ✓ Guardado
-                    </span>
-                  )}
-                </div>
-              </section>
-
-              {/* Marca de la semana (puntito ámbar en el gráfico) */}
-              <section className="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
-                <Label>
-                  <span className="text-amber-700">⚑ Marcar esta semana (opcional)</span>
-                </Label>
-                <TextArea
-                  value={flagDraft}
-                  onChange={(e) => {
-                    setFlagDraft(e.target.value);
-                    setFlagSaved(false);
-                  }}
-                  placeholder="Ej: no hubo búsquedas suficientemente buenas / complicaciones para atraer talento…"
-                />
-                <div className="mt-2 flex items-center gap-3">
-                  <Button onClick={handleSaveFlag} disabled={flagSaving}>
-                    {flagSaving ? "Guardando…" : "Guardar marca"}
-                  </Button>
-                  {flagSaved && (
-                    <span className="text-xs font-medium text-amber-700">✓ Guardado</span>
-                  )}
-                  <span className="text-xs text-slate-400">
-                    Si lo dejás vacío, la semana queda sin marca.
-                  </span>
-                </div>
-              </section>
-
-              <OpportunityEditor
-                weekId={selected.id}
-                opportunities={selected.opportunities}
+              <h2 className="text-lg font-bold text-slate-800">
+                Semana del {weekRangeLabel(selected.weekStart)}
+              </h2>
+              <WeekEditor
+                week={selected}
                 onChange={async () => {
                   await reload(selected.id);
                 }}
-              />
-
-              <ContentEditor
-                weekId={selected.id}
-                contents={selected.contents}
-                opportunities={selected.opportunities}
-                onChange={async () => {
-                  await reload(selected.id);
+                onDeleted={() => {
+                  /* reload ya reasignó la selección */
                 }}
               />
-
-              {/* Resumen del funnel calculado */}
-              <section className="rounded-2xl border border-accent-200 bg-accent-50 p-5">
-                <h3 className="mb-2 text-sm font-bold text-accent-800">
-                  Funnel calculado de esta semana
-                </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
-                  <FunnelStat label="Contenidos" value={selected.funnel.contentsCount} />
-                  <FunnelStat label="Views" value={selected.funnel.views} />
-                  <FunnelStat label="Postulaciones" value={selected.funnel.applications} />
-                  <FunnelStat label="Presentados" value={selected.funnel.presented} />
-                  <FunnelStat label="Confirmados" value={selected.funnel.confirmed} />
-                </div>
-              </section>
             </>
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center text-sm text-slate-400">
@@ -353,15 +148,6 @@ export default function CargarPage() {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-function FunnelStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl bg-white/70 px-3 py-2">
-      <p className="text-lg font-extrabold tabular-nums text-accent-800">{value}</p>
-      <p className="text-xs font-semibold text-accent-700/70">{label}</p>
     </div>
   );
 }

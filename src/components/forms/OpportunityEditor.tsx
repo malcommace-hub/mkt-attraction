@@ -10,7 +10,7 @@ import {
 } from "@/lib/data";
 import { SeniorityBadge } from "@/components/Badges";
 import { fmt } from "@/lib/format";
-import { Button, Label, NumberInput, Select, TextInput } from "./inputs";
+import { Button, Label, NumberInput, Select, TextArea, TextInput } from "./inputs";
 
 const EMPTY: OpportunityInput = {
   role: "",
@@ -20,6 +20,7 @@ const EMPTY: OpportunityInput = {
   presented: 0,
   confirmed: 0,
   date: null,
+  note: null,
 };
 
 function toInput(o: OpportunityRow): OpportunityInput {
@@ -31,6 +32,7 @@ function toInput(o: OpportunityRow): OpportunityInput {
     presented: o.presented,
     confirmed: o.confirmed,
     date: o.date,
+    note: o.note,
   };
 }
 
@@ -59,6 +61,7 @@ function OpportunityForm({
         role: form.role.trim(),
         company: form.company.trim(),
         date: form.date || null,
+        note: form.note?.trim() || null,
       });
     } finally {
       setSaving(false);
@@ -132,6 +135,14 @@ function OpportunityForm({
           type="date"
           value={form.date ?? ""}
           onChange={(e) => setForm({ ...form, date: e.target.value || null })}
+        />
+      </div>
+      <div className="sm:col-span-12">
+        <Label>Comentario / insight de esta oportunidad (opcional)</Label>
+        <TextArea
+          value={form.note ?? ""}
+          placeholder="Ej: rol muy demandado, buena recepción / la empresa pausó la búsqueda…"
+          onChange={(e) => setForm({ ...form, note: e.target.value || null })}
         />
       </div>
 
@@ -214,6 +225,9 @@ export function OpportunityEditor({
                     {fmt(o.confirmed)} conf
                   </span>
                 </div>
+                {o.note && (
+                  <p className="mt-1 text-xs italic text-slate-400">“{o.note}”</p>
+                )}
               </div>
               <div className="flex gap-1">
                 <Button variant="ghost" onClick={() => setEditingId(o.id)}>

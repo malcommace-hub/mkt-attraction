@@ -32,6 +32,7 @@ create table if not exists public.opportunities (
   presented    integer not null default 0 check (presented >= 0),
   confirmed    integer not null default 0 check (confirmed >= 0),
   date         date,
+  note         text,                            -- comentario / insight de la oportunidad
   created_at   timestamptz not null default now()
 );
 

@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import type { WeekFull } from "@/lib/types";
 import { fmt } from "@/lib/format";
 import { ChannelBadge, SeniorityBadge } from "./Badges";
@@ -57,22 +58,31 @@ export function WeekDetailBody({ week }: { week: WeekFull }) {
               </thead>
               <tbody>
                 {week.opportunities.map((o) => (
-                  <tr key={o.id} className="border-b border-slate-50 last:border-0">
-                    <td className="py-2.5 pr-3 font-semibold text-slate-800">{o.role}</td>
-                    <td className="py-2.5 pr-3 text-slate-500">{o.company}</td>
-                    <td className="py-2.5 pr-3">
-                      <SeniorityBadge seniority={o.seniority} />
-                    </td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
-                      {fmt(o.applications)}
-                    </td>
-                    <td className="py-2.5 pr-3 text-right tabular-nums font-semibold text-accent-700">
-                      {fmt(o.presented)}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums font-semibold text-violet-600">
-                      {fmt(o.confirmed)}
-                    </td>
-                  </tr>
+                  <Fragment key={o.id}>
+                    <tr className={o.note ? "" : "border-b border-slate-50 last:border-0"}>
+                      <td className="py-2.5 pr-3 font-semibold text-slate-800">{o.role}</td>
+                      <td className="py-2.5 pr-3 text-slate-500">{o.company}</td>
+                      <td className="py-2.5 pr-3">
+                        <SeniorityBadge seniority={o.seniority} />
+                      </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums text-slate-700">
+                        {fmt(o.applications)}
+                      </td>
+                      <td className="py-2.5 pr-3 text-right tabular-nums font-semibold text-accent-700">
+                        {fmt(o.presented)}
+                      </td>
+                      <td className="py-2.5 text-right tabular-nums font-semibold text-violet-600">
+                        {fmt(o.confirmed)}
+                      </td>
+                    </tr>
+                    {o.note && (
+                      <tr className="border-b border-slate-50 last:border-0">
+                        <td colSpan={6} className="pb-2.5 pl-0 pr-3">
+                          <span className="text-xs italic text-slate-500">💬 {o.note}</span>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>

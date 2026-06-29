@@ -165,16 +165,23 @@ function ConfirmedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint 
   );
 }
 
-// ---- Puntito ámbar para semanas marcadas, arriba de la barra ----
-function FlagDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
+// ---- Triángulo ámbar en la base de la barra para semanas marcadas ----
+function FlagTriangle(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
   const { cx, cy, payload } = props;
   if (cx == null || cy == null || !payload || payload.flagMarkerY == null) {
     return <g />;
   }
+  // cy = línea base (valor 0). Triángulo apuntando hacia arriba, apoyado en la base.
+  const w = 8;
+  const h = 13;
   return (
-    <g>
-      <circle cx={cx} cy={cy} r={6} fill={COLOR_FLAG} stroke="#fff" strokeWidth={2} />
-    </g>
+    <polygon
+      points={`${cx},${cy - h} ${cx - w},${cy - 1} ${cx + w},${cy - 1}`}
+      fill={COLOR_FLAG}
+      stroke="#fff"
+      strokeWidth={2}
+      strokeLinejoin="round"
+    />
   );
 }
 
@@ -219,7 +226,7 @@ export function FunnelChart({
     ...d,
     presentedMarkerY: d.presented > 0 ? d.applications * 0.68 : null,
     confirmedMarkerY: d.confirmed > 0 ? d.applications * 0.34 : null,
-    flagMarkerY: d.flagNote ? d.applications : null,
+    flagMarkerY: d.flagNote ? 0 : null, // en la base de la barra
   }));
 
   // Ancho por semana: si entran <=10, llenan el contenedor; si hay más, scroll.
@@ -283,7 +290,7 @@ export function FunnelChart({
                   { value: "Postulaciones", type: "rect", color: COLOR_APPLICATIONS, id: "apps" },
                   { value: "Presentados", type: "circle", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
-                  { value: "Semana marcada", type: "circle", color: COLOR_FLAG, id: "flag" },
+                  { value: "Semana marcada", type: "triangle", color: COLOR_FLAG, id: "flag" },
                 ]}
               />
               <Bar
@@ -330,15 +337,15 @@ export function FunnelChart({
                 activeDot={false}
                 connectNulls={false}
               />
-              {/* Puntito ámbar de semana marcada (arriba de la barra) */}
+              {/* Triángulo ámbar de semana marcada (en la base de la barra) */}
               <Line
                 yAxisId="right"
                 dataKey="flagMarkerY"
                 name="Semana marcada"
                 stroke="none"
                 isAnimationActive={false}
-                legendType="circle"
-                dot={<FlagDot />}
+                legendType="triangle"
+                dot={<FlagTriangle />}
                 activeDot={false}
                 connectNulls={false}
               />
