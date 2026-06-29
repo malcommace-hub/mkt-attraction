@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ComposedChart,
+  LabelList,
   Legend,
   Line,
   ResponsiveContainer,
@@ -24,10 +25,9 @@ export type ChartPoint = {
   confirmedOpps: string[];
 };
 
-// Punto interno con las coordenadas de los marcadores (círculos sobre la barra).
+// Punto interno con la coordenada del círculo violeta (confirmados).
 type PlottedPoint = ChartPoint & {
-  presentedMarkerY: number | null; // y del círculo azul (parte alta de la barra)
-  confirmedMarkerY: number | null; // y del círculo violeta (parte baja de la barra)
+  confirmedMarkerY: number | null; // y del círculo violeta (medio de la barra)
 };
 
 const VISIBLE_WEEKS = 10; // semanas que entran sin scrollear
@@ -128,19 +128,6 @@ function CountDot({
   );
 }
 
-function PresentedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
-  const { cx, cy, payload } = props;
-  return (
-    <CountDot
-      cx={cx}
-      cy={cy}
-      value={payload?.presented ?? 0}
-      show={!!payload && payload.presentedMarkerY != null}
-      color={COLOR_PRESENTED}
-    />
-  );
-}
-
 function ConfirmedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
   const { cx, cy, payload } = props;
   return (
@@ -190,13 +177,15 @@ export function FunnelChart({
     );
   }
 
-  // Coordenadas de los marcadores (en unidades del eje derecho = postulaciones).
-  // Presentados (azul) en la parte alta de la barra, confirmados (violeta) más abajo.
+  // Círculo violeta de confirmados: centrado en la barra (eje derecho = postulaciones).
   const plotted: PlottedPoint[] = data.map((d) => ({
     ...d,
-    presentedMarkerY: d.presented > 0 ? d.applications * 0.68 : null,
-    confirmedMarkerY: d.confirmed > 0 ? d.applications * 0.34 : null,
+    confirmedMarkerY: d.confirmed > 0 ? d.applications / 2 : null,
   }));
+
+  // Presentados va como línea con su propia escala (para que no quede aplastada).
+  const maxPresented = Math.max(1, ...data.map((d) => d.presented));
+  const presentedTop = Math.max(4, Math.ceil(maxPresented * 1.4));
 
   // Ancho por semana: si entran <=10, llenan el contenedor; si hay más, scroll.
   const perWeek =
@@ -263,6 +252,8 @@ export function FunnelChart({
                 axisLine={false}
                 width={40}
               />
+              {/* Eje oculto para la línea de presentados (escala propia) */}
+              <YAxis yAxisId="pres" hide domain={[0, presentedTop]} />
               <Tooltip cursor={{ fill: "rgba(46, 204, 113, 0.06)" }} content={<ChartTooltip />} />
               <Legend
                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
@@ -271,7 +262,7 @@ export function FunnelChart({
                     ? [{ value: "Views", type: "line" as const, color: COLOR_VIEWS, id: "views" }]
                     : []),
                   { value: "Postulaciones", type: "rect", color: COLOR_APPLICATIONS, id: "apps" },
-                  { value: "Presentados", type: "circle", color: COLOR_PRESENTED, id: "pres" },
+                  { value: "Presentados", type: "line", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
                 ]}
               />
@@ -283,7 +274,16 @@ export function FunnelChart({
                 radius={[6, 6, 0, 0]}
                 maxBarSize={36}
                 animationDuration={500}
-              />
+              >
+                <LabelList
+                  dataKey="applications"
+                  position="top"
+                  offset={8}
+                  fontSize={12}
+                  fontWeight={700}
+                  fill="#15803d"
+                />
+              </Bar>
               {showViews && (
                 <Line
                   yAxisId="left"
@@ -297,19 +297,19 @@ export function FunnelChart({
                   animationDuration={600}
                 />
               )}
-              {/* Círculo azul de presentados (parte alta de la barra) */}
+              {/* Presentados: línea azul con escala propia */}
               <Line
-                yAxisId="right"
-                dataKey="presentedMarkerY"
+                yAxisId="pres"
+                type="monotone"
+                dataKey="presented"
                 name="Presentados"
-                stroke="none"
-                isAnimationActive={false}
-                legendType="circle"
-                dot={<PresentedDot />}
-                activeDot={false}
-                connectNulls={false}
+                stroke={COLOR_PRESENTED}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: COLOR_PRESENTED }}
+                activeDot={{ r: 5 }}
+                animationDuration={600}
               />
-              {/* Círculo violeta de confirmados (parte baja de la barra) */}
+              {/* Círculo violeta de confirmados (centro de la barra) */}
               <Line
                 yAxisId="right"
                 dataKey="confirmedMarkerY"
