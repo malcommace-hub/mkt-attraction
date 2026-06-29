@@ -27,7 +27,8 @@ export type ChartPoint = {
 
 // Punto interno con las coordenadas de los marcadores (círculos sobre la barra).
 type PlottedPoint = ChartPoint & {
-  confirmedMarkerY: number | null; // y del círculo violeta (medio de la barra)
+  presentedMarkerY: number | null; // y del círculo azul (parte alta de la barra)
+  confirmedMarkerY: number | null; // y del círculo violeta (parte baja de la barra)
   flagMarkerY: number | null; // y del puntito ámbar (arriba de la barra)
 };
 
@@ -105,19 +106,24 @@ function ChartTooltip({
   );
 }
 
-// ---- Círculo violeta con el número de confirmados, centrado en la barra ----
-function ConfirmedDot(props: {
+// ---- Círculo con un número adentro (sirve para presentados y confirmados) ----
+function CountDot({
+  cx,
+  cy,
+  value,
+  show,
+  color,
+}: {
   cx?: number;
   cy?: number;
-  payload?: PlottedPoint;
+  value: number;
+  show: boolean;
+  color: string;
 }) {
-  const { cx, cy, payload } = props;
-  if (cx == null || cy == null || !payload || payload.confirmedMarkerY == null) {
-    return <g />;
-  }
+  if (cx == null || cy == null || !show) return <g />;
   return (
     <g>
-      <circle cx={cx} cy={cy} r={11} fill={COLOR_CONFIRMED} stroke="#fff" strokeWidth={2} />
+      <circle cx={cx} cy={cy} r={11} fill={color} stroke="#fff" strokeWidth={2} />
       <text
         x={cx}
         y={cy}
@@ -127,9 +133,35 @@ function ConfirmedDot(props: {
         fontWeight={700}
         fill="#fff"
       >
-        {payload.confirmed}
+        {value}
       </text>
     </g>
+  );
+}
+
+function PresentedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
+  const { cx, cy, payload } = props;
+  return (
+    <CountDot
+      cx={cx}
+      cy={cy}
+      value={payload?.presented ?? 0}
+      show={!!payload && payload.presentedMarkerY != null}
+      color={COLOR_PRESENTED}
+    />
+  );
+}
+
+function ConfirmedDot(props: { cx?: number; cy?: number; payload?: PlottedPoint }) {
+  const { cx, cy, payload } = props;
+  return (
+    <CountDot
+      cx={cx}
+      cy={cy}
+      value={payload?.confirmed ?? 0}
+      show={!!payload && payload.confirmedMarkerY != null}
+      color={COLOR_CONFIRMED}
+    />
   );
 }
 
@@ -182,9 +214,11 @@ export function FunnelChart({
   }
 
   // Coordenadas de los marcadores (en unidades del eje derecho = postulaciones).
+  // Presentados (azul) en la parte alta de la barra, confirmados (violeta) más abajo.
   const plotted: PlottedPoint[] = data.map((d) => ({
     ...d,
-    confirmedMarkerY: d.confirmed > 0 ? d.applications / 2 : null,
+    presentedMarkerY: d.presented > 0 ? d.applications * 0.68 : null,
+    confirmedMarkerY: d.confirmed > 0 ? d.applications * 0.34 : null,
     flagMarkerY: d.flagNote ? d.applications : null,
   }));
 
@@ -246,8 +280,8 @@ export function FunnelChart({
                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                 payload={[
                   { value: "Views", type: "line", color: COLOR_VIEWS, id: "views" },
-                  { value: "Postulaciones", type: "circle", color: COLOR_APPLICATIONS, id: "apps" },
-                  { value: "Presentados", type: "line", color: COLOR_PRESENTED, id: "pres" },
+                  { value: "Postulaciones", type: "rect", color: COLOR_APPLICATIONS, id: "apps" },
+                  { value: "Presentados", type: "circle", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
                   { value: "Semana marcada", type: "circle", color: COLOR_FLAG, id: "flag" },
                 ]}
@@ -272,19 +306,19 @@ export function FunnelChart({
                 activeDot={{ r: 5 }}
                 animationDuration={600}
               />
-              {/* Presentados: línea azul sobre el eje de postulaciones */}
+              {/* Círculo azul de presentados (parte alta de la barra) */}
               <Line
                 yAxisId="right"
-                type="monotone"
-                dataKey="presented"
+                dataKey="presentedMarkerY"
                 name="Presentados"
-                stroke={COLOR_PRESENTED}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: COLOR_PRESENTED }}
-                activeDot={{ r: 5 }}
-                animationDuration={600}
+                stroke="none"
+                isAnimationActive={false}
+                legendType="circle"
+                dot={<PresentedDot />}
+                activeDot={false}
+                connectNulls={false}
               />
-              {/* Círculo violeta de confirmados (centro de la barra) */}
+              {/* Círculo violeta de confirmados (parte baja de la barra) */}
               <Line
                 yAxisId="right"
                 dataKey="confirmedMarkerY"
