@@ -36,8 +36,8 @@ const MIN_WEEK_PX = 78; // ancho mínimo por semana (para mobile / pocas semanas
 const CHART_HEIGHT = 440;
 
 const COLOR_VIEWS = "#1e293b";
-const COLOR_APPLICATIONS = "#3b82f6"; // postulaciones = línea azul (contexto)
-const COLOR_PRESENTED = "#2ECC71"; // presentados = barras verdes (protagonista)
+const COLOR_APPLICATIONS = "#2ECC71";
+const COLOR_PRESENTED = "#3b82f6";
 const COLOR_CONFIRMED = "#8b5cf6";
 const COLOR_FLAG = "#f59e0b";
 
@@ -181,17 +181,11 @@ export function FunnelChart({
     );
   }
 
-  // Escalas: presentados (barras, eje derecho) y postulaciones (línea, eje oculto).
-  const maxPresented = Math.max(1, ...data.map((d) => d.presented));
-  const maxApplications = Math.max(1, ...data.map((d) => d.applications));
-  const presentedTop = Math.ceil(maxPresented * 1.25);
-
-  // Marcadores en unidades del eje derecho (= presentados / barras verdes):
-  // el círculo violeta va en el medio de la barra, el puntito ámbar arriba de todo.
+  // Coordenadas de los marcadores (en unidades del eje derecho = postulaciones).
   const plotted: PlottedPoint[] = data.map((d) => ({
     ...d,
-    confirmedMarkerY: d.confirmed > 0 ? Math.max(d.presented, 0.4) / 2 : null,
-    flagMarkerY: d.flagNote ? maxPresented : null,
+    confirmedMarkerY: d.confirmed > 0 ? d.applications / 2 : null,
+    flagMarkerY: d.flagNote ? d.applications : null,
   }));
 
   // Ancho por semana: si entran <=10, llenan el contenedor; si hay más, scroll.
@@ -203,7 +197,7 @@ export function FunnelChart({
     <div className="rounded-2xl border border-slate-200/70 bg-white p-4 shadow-soft">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-sm font-bold text-slate-700">
-          Presentados, postulaciones y views por semana
+          Views vs. postulaciones por semana
         </h3>
         <span className="hidden text-xs text-slate-400 sm:inline">
           ⇽ scrolleá para ver más semanas ⇾
@@ -239,57 +233,34 @@ export function FunnelChart({
                 width={52}
                 tickFormatter={(v) => fmt(v as number)}
               />
-              {/* Eje derecho visible = presentados (barras verdes) */}
               <YAxis
                 yAxisId="right"
                 orientation="right"
-                domain={[0, presentedTop]}
-                allowDecimals={false}
                 tick={{ fontSize: 11, fill: "#94a3b8" }}
                 tickLine={false}
                 axisLine={false}
-                width={36}
-              />
-              {/* Eje oculto = postulaciones (línea azul de contexto) */}
-              <YAxis
-                yAxisId="post"
-                hide
-                domain={[0, Math.ceil(maxApplications * 1.1)]}
+                width={40}
               />
               <Tooltip cursor={{ fill: "rgba(46, 204, 113, 0.06)" }} content={<ChartTooltip />} />
               <Legend
                 wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
                 payload={[
-                  { value: "Presentados", type: "rect", color: COLOR_PRESENTED, id: "pres" },
-                  { value: "Postulaciones", type: "line", color: COLOR_APPLICATIONS, id: "apps" },
                   { value: "Views", type: "line", color: COLOR_VIEWS, id: "views" },
+                  { value: "Postulaciones", type: "circle", color: COLOR_APPLICATIONS, id: "apps" },
+                  { value: "Presentados", type: "line", color: COLOR_PRESENTED, id: "pres" },
                   { value: "Confirmados", type: "circle", color: COLOR_CONFIRMED, id: "conf" },
                   { value: "Semana marcada", type: "circle", color: COLOR_FLAG, id: "flag" },
                 ]}
               />
-              {/* Presentados: barras verdes (protagonista) */}
               <Bar
                 yAxisId="right"
-                dataKey="presented"
-                name="Presentados"
-                fill={COLOR_PRESENTED}
-                radius={[6, 6, 0, 0]}
-                maxBarSize={40}
-                animationDuration={500}
-              />
-              {/* Postulaciones: línea azul de contexto (escala propia oculta) */}
-              <Line
-                yAxisId="post"
-                type="monotone"
                 dataKey="applications"
                 name="Postulaciones"
-                stroke={COLOR_APPLICATIONS}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: COLOR_APPLICATIONS }}
-                activeDot={{ r: 5 }}
-                animationDuration={600}
+                fill={COLOR_APPLICATIONS}
+                radius={[6, 6, 0, 0]}
+                maxBarSize={36}
+                animationDuration={500}
               />
-              {/* Views: línea negra de contexto (eje izquierdo) */}
               <Line
                 yAxisId="left"
                 type="monotone"
@@ -298,6 +269,18 @@ export function FunnelChart({
                 stroke={COLOR_VIEWS}
                 strokeWidth={2.5}
                 dot={{ r: 3, fill: COLOR_VIEWS }}
+                activeDot={{ r: 5 }}
+                animationDuration={600}
+              />
+              {/* Presentados: línea azul sobre el eje de postulaciones */}
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="presented"
+                name="Presentados"
+                stroke={COLOR_PRESENTED}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: COLOR_PRESENTED }}
                 activeDot={{ r: 5 }}
                 animationDuration={600}
               />
