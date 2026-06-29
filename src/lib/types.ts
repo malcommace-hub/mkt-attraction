@@ -1,4 +1,4 @@
-// Tipos de dominio del tablero "Supply Generation".
+// Tipos de dominio del tablero "Supply Generation" (modelo por OPORTUNIDAD).
 
 export type Channel = "LinkedIn" | "Instagram" | "TikTok" | "Todas las redes";
 export const CHANNELS: Channel[] = [
@@ -12,30 +12,21 @@ export type Seniority = "Junior" | "Semi-Senior" | "Senior";
 export const SENIORITIES: Seniority[] = ["Junior", "Semi-Senior", "Senior"];
 
 // Filas tal cual vienen de la base de datos.
-export interface WeekRow {
-  id: string;
-  week_start: string; // ISO date (lunes de la semana)
-  created_at: string;
-}
-
 export interface OpportunityRow {
   id: string;
-  week_id: string;
   role: string;
   company: string;
   seniority: Seniority;
-  applications: number;
-  profiles_for_base: number; // perfiles útiles para la base a futuro (no para esta búsqueda)
-  presented: number;
-  confirmed: number;
-  date: string | null;
-  note: string | null; // comentario / insight de esta oportunidad
+  date: string; // fecha de carga de la oportunidad (ISO date)
+  applications: number; // postulaciones
+  presented: number; // candidatos presentados (career site)
+  confirmed: number; // candidatos confirmados
+  note: string | null; // comentario / insight
   created_at: string;
 }
 
 export interface ContentRow {
   id: string;
-  week_id: string;
   channel: Channel;
   title: string;
   views: number;
@@ -48,26 +39,20 @@ export interface ContentOpportunityRow {
   opportunity_id: string;
 }
 
-// Contenido con las oportunidades que aparecieron en él (resuelto en el cliente).
-export interface ContentWithOpps extends ContentRow {
+// Contenido con la lista de oportunidades a las que está vinculado.
+export interface ContentWithLinks extends ContentRow {
   opportunityIds: string[];
 }
 
-// Funnel de una semana (la mayoría calculado; profilesForBase es manual).
-export interface WeekFunnel {
-  contentsCount: number;
-  views: number;
-  applications: number;
-  profilesForBase: number;
-  presented: number;
-  confirmed: number;
+// Total mensual de presentados (todas las fuentes), carga manual.
+export interface MonthRow {
+  month: string; // 'YYYY-MM'
+  total_presented: number;
 }
 
-// Semana completa con su detalle y funnel.
-export interface WeekFull {
-  id: string;
-  weekStart: string;
-  opportunities: OpportunityRow[];
-  contents: ContentWithOpps[];
-  funnel: WeekFunnel;
+// Oportunidad con sus contenidos asignados y métricas calculadas.
+export interface OpportunityFull extends OpportunityRow {
+  contents: ContentWithLinks[];
+  views: number; // suma de views de los contenidos asignados
+  contentsCount: number;
 }

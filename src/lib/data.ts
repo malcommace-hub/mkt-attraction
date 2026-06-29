@@ -1,153 +1,97 @@
 "use client";
 
 import { supabase } from "./supabase";
-import { mondayOf } from "./week";
 import type {
   ContentRow,
   ContentOpportunityRow,
-  ContentWithOpps,
+  ContentWithLinks,
+  MonthRow,
+  OpportunityFull,
   OpportunityRow,
-  WeekFull,
-  WeekFunnel,
-  WeekRow,
+  Seniority,
 } from "./types";
 
 // Convierte cualquier error de Supabase en un mensaje claro en español.
-// Detecta los casos típicos de una configuración recién hecha.
 export function friendlyError(e: unknown): string {
-  const err = e as { message?: string; code?: string; hint?: string } | null;
+  const err = e as { message?: string; code?: string } | null;
   const msg = err?.message ?? "";
   const code = err?.code ?? "";
-
-  // Tabla inexistente: falta correr el supabase.sql.
   if (code === "42P01" || /does not exist|schema cache|relation .* does not/i.test(msg)) {
-    return 'Parece que las tablas todavía no existen. Andá al SQL Editor de Supabase y ejecutá el archivo "supabase.sql" del repo.';
+    return 'Parece que falta una tabla/columna. Andá al SQL Editor de Supabase y ejecutá el SQL más reciente que te pasé.';
   }
-  // Clave inválida / sin permisos.
   if (code === "401" || /invalid api key|jwt|unauthorized|permission denied/i.test(msg)) {
-    return "La conexión a Supabase fue rechazada. Revisá que NEXT_PUBLIC_SUPABASE_ANON_KEY sea la anon/publishable key correcta y que las políticas RLS estén creadas.";
+    return "La conexión a Supabase fue rechazada. Revisá la anon key y las políticas RLS.";
   }
   if (/failed to fetch|networkerror|load failed/i.test(msg)) {
-    return "No se pudo conectar con Supabase. Revisá que NEXT_PUBLIC_SUPABASE_URL apunte a tu proyecto.";
+    return "No se pudo conectar con Supabase. Revisá NEXT_PUBLIC_SUPABASE_URL.";
   }
-  return msg || "Ocurrió un error al cargar los datos. Revisá la configuración de Supabase.";
+  return msg || "Ocurrió un error. Revisá la configuración de Supabase.";
 }
 
-// Calcula el funnel de una semana sumando su detalle.
-export function computeFunnel(
-  contents: ContentWithOpps[],
-  opportunities: OpportunityRow[]
-): WeekFunnel {
-  return {
-    contentsCount: contents.length,
-    views: contents.reduce((acc, c) => acc + (c.views || 0), 0),
-    applications: opportunities.reduce((acc, o) => acc + (o.applications || 0), 0),
-    profilesForBase: opportunities.reduce((acc, o) => acc + (o.profiles_for_base || 0), 0),
-    presented: opportunities.reduce((acc, o) => acc + (o.presented || 0), 0),
-    confirmed: opportunities.reduce((acc, o) => acc + (o.confirmed || 0), 0),
-  };
-}
+// ---- Carga global ----
 
-// Trae TODAS las semanas con su detalle, ordenadas de la más reciente a la más antigua.
-export async function fetchAllWeeks(): Promise<WeekFull[]> {
-  const [weeksRes, oppsRes, contentsRes, linksRes] = await Promise.all([
-    supabase.from("weeks").select("*").order("week_start", { ascending: false }),
-    supabase.from("opportunities").select("*").order("created_at", { ascending: true }),
+export type DashboardData = {
+  opportunities: OpportunityFull[]; // más recientes primero
+  allContents: ContentWithLinks[];
+  months: MonthRow[];
+};
+
+export async function fetchDashboard(): Promise<DashboardData> {
+  const [oppsRes, contentsRes, linksRes, monthsRes] = await Promise.all([
+    supabase.from("opportunities").select("*").order("date", { ascending: false }),
     supabase.from("contents").select("*").order("created_at", { ascending: true }),
     supabase.from("content_opportunities").select("*"),
+    supabase.from("months").select("*"),
   ]);
 
-  if (weeksRes.error) throw weeksRes.error;
   if (oppsRes.error) throw oppsRes.error;
   if (contentsRes.error) throw contentsRes.error;
   if (linksRes.error) throw linksRes.error;
+  if (monthsRes.error) throw monthsRes.error;
 
-  const weeks = (weeksRes.data ?? []) as WeekRow[];
   const opps = (oppsRes.data ?? []) as OpportunityRow[];
   const contents = (contentsRes.data ?? []) as ContentRow[];
   const links = (linksRes.data ?? []) as ContentOpportunityRow[];
+  const months = (monthsRes.data ?? []) as MonthRow[];
 
   // Mapa content_id -> [opportunity_id]
-  const linksByContent = new Map<string, string[]>();
+  const oppIdsByContent = new Map<string, string[]>();
   for (const link of links) {
-    const arr = linksByContent.get(link.content_id) ?? [];
+    const arr = oppIdsByContent.get(link.content_id) ?? [];
     arr.push(link.opportunity_id);
-    linksByContent.set(link.content_id, arr);
+    oppIdsByContent.set(link.content_id, arr);
   }
 
-  const oppsByWeek = new Map<string, OpportunityRow[]>();
-  for (const o of opps) {
-    const arr = oppsByWeek.get(o.week_id) ?? [];
-    arr.push(o);
-    oppsByWeek.set(o.week_id, arr);
+  const allContents: ContentWithLinks[] = contents.map((c) => ({
+    ...c,
+    opportunityIds: oppIdsByContent.get(c.id) ?? [],
+  }));
+  const contentById = new Map(allContents.map((c) => [c.id, c]));
+
+  // Mapa opportunity_id -> contenidos asignados.
+  const contentsByOpp = new Map<string, ContentWithLinks[]>();
+  for (const link of links) {
+    const c = contentById.get(link.content_id);
+    if (!c) continue;
+    const arr = contentsByOpp.get(link.opportunity_id) ?? [];
+    arr.push(c);
+    contentsByOpp.set(link.opportunity_id, arr);
   }
 
-  const contentsByWeek = new Map<string, ContentWithOpps[]>();
-  for (const c of contents) {
-    const arr = contentsByWeek.get(c.week_id) ?? [];
-    arr.push({ ...c, opportunityIds: linksByContent.get(c.id) ?? [] });
-    contentsByWeek.set(c.week_id, arr);
-  }
-
-  return weeks.map((w) => {
-    const weekOpps = oppsByWeek.get(w.id) ?? [];
-    const weekContents = contentsByWeek.get(w.id) ?? [];
+  const opportunities: OpportunityFull[] = opps.map((o) => {
+    const oppContents = contentsByOpp.get(o.id) ?? [];
     return {
-      id: w.id,
-      weekStart: w.week_start,
-      opportunities: weekOpps,
-      contents: weekContents,
-      funnel: computeFunnel(weekContents, weekOpps),
-    } satisfies WeekFull;
+      ...o,
+      contents: oppContents,
+      views: oppContents.reduce((acc, c) => acc + (c.views || 0), 0),
+      contentsCount: oppContents.length,
+    };
   });
-}
 
-// Crea (o devuelve la existente) la semana que contiene la fecha dada.
-export async function getOrCreateWeek(dateISO: string): Promise<WeekRow> {
-  const weekStart = mondayOf(dateISO);
+  // Ordenar por fecha desc (la query ya ordena, pero aseguramos por las dudas).
+  opportunities.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
 
-  const existing = await supabase
-    .from("weeks")
-    .select("*")
-    .eq("week_start", weekStart)
-    .maybeSingle();
-
-  if (existing.error) throw existing.error;
-  if (existing.data) return existing.data as WeekRow;
-
-  const inserted = await supabase
-    .from("weeks")
-    .insert({ week_start: weekStart })
-    .select()
-    .single();
-
-  if (inserted.error) throw inserted.error;
-  return inserted.data as WeekRow;
-}
-
-// Cambia la fecha de una semana: reubica week_start al lunes de la fecha dada.
-export async function updateWeekStart(weekId: string, dateISO: string): Promise<void> {
-  const weekStart = mondayOf(dateISO);
-  const { error } = await supabase
-    .from("weeks")
-    .update({ week_start: weekStart })
-    .eq("id", weekId);
-  if (error) {
-    // Choca con otra semana que ya tiene ese lunes (week_start es único).
-    if (error.code === "23505" || /duplicate|unique/i.test(error.message ?? "")) {
-      throw new Error(
-        "Ya existe una semana con esa fecha. Eliminá o elegí otra para evitar duplicados."
-      );
-    }
-    throw error;
-  }
-}
-
-
-export async function deleteWeek(weekId: string): Promise<void> {
-  // Las FK están con ON DELETE CASCADE, así que esto limpia todo el detalle.
-  const { error } = await supabase.from("weeks").delete().eq("id", weekId);
-  if (error) throw error;
+  return { opportunities, allContents, months };
 }
 
 // ---- Oportunidades ----
@@ -155,32 +99,25 @@ export async function deleteWeek(weekId: string): Promise<void> {
 export type OpportunityInput = {
   role: string;
   company: string;
-  seniority: OpportunityRow["seniority"];
+  seniority: Seniority;
+  date: string;
   applications: number;
-  profiles_for_base: number;
   presented: number;
   confirmed: number;
-  date: string | null;
   note: string | null;
 };
 
-export async function insertOpportunity(
-  weekId: string,
-  input: OpportunityInput
-): Promise<OpportunityRow> {
+export async function insertOpportunity(input: OpportunityInput): Promise<OpportunityRow> {
   const { data, error } = await supabase
     .from("opportunities")
-    .insert({ week_id: weekId, ...input })
+    .insert(input)
     .select()
     .single();
   if (error) throw error;
   return data as OpportunityRow;
 }
 
-export async function updateOpportunity(
-  id: string,
-  input: OpportunityInput
-): Promise<void> {
+export async function updateOpportunity(id: string, input: OpportunityInput): Promise<void> {
   const { error } = await supabase.from("opportunities").update(input).eq("id", id);
   if (error) throw error;
 }
@@ -199,14 +136,14 @@ export type ContentInput = {
   url: string | null;
 };
 
+// Crea un contenido y lo vincula a las oportunidades indicadas.
 export async function insertContent(
-  weekId: string,
   input: ContentInput,
   opportunityIds: string[]
 ): Promise<ContentRow> {
   const { data, error } = await supabase
     .from("contents")
-    .insert({ week_id: weekId, ...input })
+    .insert(input)
     .select()
     .single();
   if (error) throw error;
@@ -240,42 +177,20 @@ export async function setContentLinks(
     .delete()
     .eq("content_id", contentId);
   if (del.error) throw del.error;
-
   if (opportunityIds.length === 0) return;
-
-  const rows = opportunityIds.map((opportunity_id) => ({
-    content_id: contentId,
-    opportunity_id,
-  }));
+  const rows = opportunityIds.map((opportunity_id) => ({ content_id: contentId, opportunity_id }));
   const ins = await supabase.from("content_opportunities").insert(rows);
   if (ins.error) throw ins.error;
 }
 
-// Totales acumulados de todas las semanas.
-export function computeGlobalTotals(weeks: WeekFull[]): WeekFunnel & {
-  conversionRate: number;
-} {
-  const totals = weeks.reduce<WeekFunnel>(
-    (acc, w) => ({
-      contentsCount: acc.contentsCount + w.funnel.contentsCount,
-      views: acc.views + w.funnel.views,
-      applications: acc.applications + w.funnel.applications,
-      profilesForBase: acc.profilesForBase + w.funnel.profilesForBase,
-      presented: acc.presented + w.funnel.presented,
-      confirmed: acc.confirmed + w.funnel.confirmed,
-    }),
-    {
-      contentsCount: 0,
-      views: 0,
-      applications: 0,
-      profilesForBase: 0,
-      presented: 0,
-      confirmed: 0,
-    }
-  );
+// ---- Totales mensuales (manual) ----
 
-  const conversionRate =
-    totals.applications > 0 ? totals.confirmed / totals.applications : 0;
-
-  return { ...totals, conversionRate };
+export async function upsertMonthTotal(month: string, totalPresented: number): Promise<void> {
+  const { error } = await supabase
+    .from("months")
+    .upsert(
+      { month, total_presented: Math.max(0, Math.round(totalPresented || 0)) },
+      { onConflict: "month" }
+    );
+  if (error) throw error;
 }
