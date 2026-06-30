@@ -18,6 +18,7 @@ export default function DashboardPage() {
 
   const [query, setQuery] = useState("");
   const [monthFilter, setMonthFilter] = useState("all");
+  const [totalsMonth, setTotalsMonth] = useState("all");
 
   async function reload() {
     const d = await fetchDashboard();
@@ -60,14 +61,24 @@ export default function DashboardPage() {
 
   const totals = useMemo(() => {
     if (!data) return null;
+    const opps =
+      totalsMonth === "all"
+        ? data.opportunities
+        : data.opportunities.filter((o) => monthKey(o.date) === totalsMonth);
+    // Contenidos distintos asignados a esas oportunidades (sin duplicar los compartidos).
+    const contentIds = new Set<string>();
+    for (const o of opps) for (const c of o.contents) contentIds.add(c.id);
+    const contentById = new Map(data.allContents.map((c) => [c.id, c]));
+    let views = 0;
+    for (const id of contentIds) views += contentById.get(id)?.views ?? 0;
     return {
-      videos: data.allContents.length,
-      views: data.allContents.reduce((a, c) => a + (c.views || 0), 0),
-      applications: data.opportunities.reduce((a, o) => a + (o.applications || 0), 0),
-      presented: data.opportunities.reduce((a, o) => a + (o.presented || 0), 0),
-      confirmed: data.opportunities.reduce((a, o) => a + (o.confirmed || 0), 0),
+      videos: contentIds.size,
+      views,
+      applications: opps.reduce((a, o) => a + (o.applications || 0), 0),
+      presented: opps.reduce((a, o) => a + (o.presented || 0), 0),
+      confirmed: opps.reduce((a, o) => a + (o.confirmed || 0), 0),
     };
-  }, [data]);
+  }, [data, totalsMonth]);
 
   // Opciones de mes (de las oportunidades existentes), más reciente primero.
   const monthOptions = useMemo(() => {
@@ -121,13 +132,32 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          {/* Totales acumulados */}
-          <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-            <StatCard label="Contenidos" value={totals.videos} />
-            <StatCard label="Views" value={totals.views} />
-            <StatCard label="Postulaciones" value={totals.applications} />
-            <StatCard label="Presentados" value={totals.presented} accent="green" />
-            <StatCard label="Confirmados" value={totals.confirmed} accent="violet" />
+          {/* Totales (filtrables por mes) */}
+          <section>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-400">
+                Totales {totalsMonth === "all" ? "acumulados" : `· ${monthLabel(totalsMonth)}`}
+              </h2>
+              <select
+                value={totalsMonth}
+                onChange={(e) => setTotalsMonth(e.target.value)}
+                className="cursor-pointer rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm outline-none focus:border-accent focus:ring-2 focus:ring-accent-200"
+              >
+                <option value="all">Todos los meses</option>
+                {monthOptions.map((k) => (
+                  <option key={k} value={k}>
+                    {monthLabel(k)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              <StatCard label="Contenidos" value={totals.videos} />
+              <StatCard label="Views" value={totals.views} />
+              <StatCard label="Postulaciones" value={totals.applications} />
+              <StatCard label="Presentados" value={totals.presented} accent="green" />
+              <StatCard label="Confirmados" value={totals.confirmed} accent="violet" />
+            </div>
           </section>
 
           {/* Gráfico de meta mensual */}

@@ -353,10 +353,18 @@ function ContentForm({
     initialOppIds.length ? initialOppIds : [currentOppId]
   );
   const [saving, setSaving] = useState(false);
+  const [showAllOpps, setShowAllOpps] = useState(false);
 
   function toggle(id: string) {
     setOppIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
+
+  // Mostramos pocas por defecto + las tildadas; el resto detrás de "Ver más".
+  const LIMIT = 7;
+  const visibleOpps = showAllOpps
+    ? allOpportunities
+    : allOpportunities.filter((o, i) => i < LIMIT || oppIds.includes(o.id));
+  const hiddenCount = allOpportunities.length - visibleOpps.length;
 
   async function submit() {
     if (form.title.trim() === "") return;
@@ -399,7 +407,7 @@ function ContentForm({
       <div className="sm:col-span-12">
         <Label>¿En qué oportunidades aparece este contenido?</Label>
         <div className="flex flex-wrap gap-2">
-          {allOpportunities.map((o) => {
+          {visibleOpps.map((o) => {
             const checked = oppIds.includes(o.id);
             return (
               <button
@@ -418,6 +426,24 @@ function ContentForm({
               </button>
             );
           })}
+          {!showAllOpps && hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAllOpps(true)}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-accent-700 ring-1 ring-inset ring-accent-200 hover:bg-accent-50"
+            >
+              Ver más ({hiddenCount})
+            </button>
+          )}
+          {showAllOpps && allOpportunities.length > LIMIT && (
+            <button
+              type="button"
+              onClick={() => setShowAllOpps(false)}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 ring-1 ring-inset ring-slate-200 hover:bg-slate-50"
+            >
+              Ver menos
+            </button>
+          )}
         </div>
         <p className="mt-1 text-xs text-slate-400">
           Las views completas del contenido se suman a cada oportunidad seleccionada.
